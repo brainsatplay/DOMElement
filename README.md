@@ -5,7 +5,7 @@
 
 This is a simple wrapper for the native template fragments in javascript.
 It's not like lithtml or React where you get custom text recognition
-for the html, just good passing old template strings. This lets you set up
+for the html, just good old passing template strings. This lets you set up
 the various event handlers for the component you are rendering when you create the fragment easily, offloading a lot of HTML and javascript spaghetti and rendering as high performance DOM fragments. iOS or some browsers will complain, but screw them :P 
 
 
