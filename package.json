@@ -18,7 +18,7 @@
   "author": "Joshua Brewster and Garrett Flynn",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "anotherstatemanager": "^1.0.0"
+    "objectlisteners": "^1.0.0"
   },
   "bugs": {
     "url": "https://github.com/brainsatplay/DOMFragment/issues"
