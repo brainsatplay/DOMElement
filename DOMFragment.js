@@ -1,4 +1,4 @@
-import {ObjectListener} from './ObjectListener'
+import {ObjectListener} from 'objectlisteners'
 
 //By Joshua Brewster (AGPL v3.0)
 
