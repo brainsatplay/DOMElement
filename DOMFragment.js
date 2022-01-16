@@ -1,4 +1,4 @@
-import {ObjectListener} from 'objectlisteners'
+import ObjectListener from 'objectlisteners'
 
 //By Joshua Brewster (AGPL v3.0)
 
@@ -255,3 +255,5 @@ export class DOMFragment {
         }
     }
 }
+
+export default DOMFragment
