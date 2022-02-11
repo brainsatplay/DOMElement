@@ -3,7 +3,7 @@
     <!-- <script src=https://cdn.jsdelivr.net/npm/webcomponents-lite@0.6.0/webcomponents-lite.min.js defer></script> -->
     <script>
 
-        function addCustomElement(cls, name, extend='div') {
+        function addCustomElement(cls, name, extend=undefined) {
 
             //console.log(cls.name)
 
@@ -14,7 +14,7 @@
         class DOMElement extends HTMLElement { 
 
             props = {test:true};
-            template = (props=this.props) => {return `<div>Custom Fragment Props: ${JSON.stringify(props)}</div>`}; //override the default template string by extending the class, or use options.template if calling the base class
+            template = (props=this.props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
             fragment = undefined;
 
             options={ //each function passes 'props'        
@@ -22,9 +22,6 @@
                 ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
                 onresize:undefined, //window.onresize event (props) => {}
                 onchange:undefined,  //if props change, e.g. re-render? (props) => {}
-                parent:undefined, //set parentNode manually in js
-                template:undefined, //template string or function (props) => {return `e.g. ${props}`;}
-                name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
             }
 
             static observedAttributes = ["props","options"];
@@ -32,7 +29,8 @@
             attributeChangedCallback(name, old, val) {
                 if(name === 'props') {
                     let newProps = val;
-                    this.state.setState({props:newProps});
+                    Object.assign(this.props,newProps);
+                    this.state.setState({props:this.props});
                 }
                 if(name === 'options'){
 
@@ -43,7 +41,7 @@
                         this.oncreate = options.oncreate;
                     }
                     if(options.template) {
-                    this.template = template; //function or string;
+                        this.template = template; //function or string;
 
                         if(typeof template === 'function') this.templateString = template(this.props); //can pass a function
                         else this.templateString = template;
@@ -70,53 +68,40 @@
                         this.state.subscribeTrigger('props',this.onchange);
                     }
 
-                    if(options.name) customElements.define(options.name.toLowerCase(),this); //declare the class
-
                 }
             }
 
-            constructor() {
-                super();
+            connectedCallback() {
 
-                //create template
-                //append node
-
-                if(this.options.parent) {
-                    if(typeof options.parent === 'string') options.parent = document.getElementById(options.parent);
-                    this.parentNode = options.parent; //set manually
-                }
-
-                if(this.options.template) {
-                    this.template = template; //function or string;
-
-                    if(typeof template === 'function') this.templateString = template(this.props); //can pass a function
-                    else this.templateString = template;
-                }
-
-                //render the template
-                if(this.parentNode)
-                    this.render(this.props);
-
-                if(this.options.oncreate) {
+                if(typeof this.options.oncreate === 'function') {
                     this.oncreate = this.options.oncreate;
-                    this.oncreate(this.props);
                 }
-                if(this.options.onresize) {
-                    this.onresize = options.onresize;
+                
+                this.render(this.props);
+
+                if(typeof this.options.onresize === 'function') {
+                    this.onresize = this.options.onresize;
                     window.addEventListener('resize',this.onresize);
                 }
-                if(this.options.ondelete) {
+                
+                if(typeof this.options.ondelete === 'function') {
                     this.ondelete = () => {
                         this.options.ondelete();
                         window.removeEventListener('resize',this.onresize);
                         this.state.unsubscribeTrigger('props');
                     }
                 }
-                if(this.options.onchange) {
+
+                if(typeof this.options.onchange === 'function') {
                     this.onchange = this.options.onchange;
                     this.state.data.props = this.props;
                     this.state.subscribeTrigger('props',this.onchange);
                 }
+
+            }
+
+            constructor() {
+                super();
             }
 
             get props() {
@@ -141,18 +126,18 @@
             ondelete=(props=this.props)=>{}
             onchange=(props=this.props)=>{}
 
-            remove = () => { //deletes self from parentNode
-                this.parentNode.removeChild(this);
+            delete = () => { //deletes self from parentNode
                 this.fragment = undefined;
+                this.remove();
                 this.ondelete(this.props);
             };
 
             render = (props=this.props) => {
 
-                console.log('render')
-
-                if(typeof this.template === 'function') this.templateString = template(props); //can pass a function
+                if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
                 else this.templateString = this.template;
+
+                //this.innerHTML = this.templateString;
 
                 const t = document.createElement('template');
                 t.innerHTML = this.templateString;
@@ -160,11 +145,12 @@
                 if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
                     this.removeChild(this.fragment); 
                 } else if (this.options.parent) { //first append for js-specified html
-                    this.parentNode.appendChild(this);
+                    this.options.parent.appendChild(this);
                 }
                 this.fragment = fragment;
                 this.appendChild(fragment);
-                this.oncreate(props);
+                
+                this.oncreate(props); //set scripted behaviors
             }
 
             state = {
@@ -223,17 +209,16 @@
                     sub = this.subscribeTrigger(key,changed);
                 }
             }
-        }
+            }
 
         addCustomElement(DOMElement,'dom-');
 
         class customelement extends DOMElement { 
             props={defaultprop:1}
-            template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
-
-            constructor() {
-                super();
-            }
+            template=(props)=>{
+                return `
+                <div>New Element: ${JSON.stringify(props)}</div>
+            `} 
         }
 
         addCustomElement(customelement,'custom-');
@@ -241,11 +226,5 @@
     </script>
 </head>
 <body>
-
-    <script>
-
-    </script>
-
-    <div is='custom-'> </div>
-
+    <custom-></custom->
 </body>

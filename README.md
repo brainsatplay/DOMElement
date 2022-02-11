@@ -7,23 +7,34 @@
 
 This is a simple wrapper for the native template fragments in javascript.
 
-DOMElement extends the HTMLElement class and implements a template fragment rendering method, and they become usable like <customelement/> 
-and can be extended e.g. 
+DOMElement extends the HTMLElement class and implements a template fragment rendering method:
 
+
+Extend it like:
 ```js
 class customelement extends DOMElement { 
   props={defaultprop:1}:
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
+  options={ //each function passes 'props'        
+      oncreate:undefined, //when the node is created e.g. setting up buttons (props) => {}
+      ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
+      onresize:undefined, //window.onresize event (props) => {}
+      onchange:undefined,  //if props change, e.g. re-render? (props) => {}
+  }
 }
+
+addCustomElement(customelement); //adds the custom class to the registry before instantiating the new element
 ```
  
 where all that needs to be set is the template variable.
 
 Then this *should* work in html:
 
-```js
-<customelement props={a:1,b:2,c:3}/>
+```html
+<customelement- props={a:1,b:2,c:3}><customelement- /> 
 ```
+
+Custom elements have to have a - in the names for whatever reason, they are auto added on the end of the class name if none specified in addCustomElement
 
 or
 
