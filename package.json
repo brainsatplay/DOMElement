@@ -19,6 +19,7 @@
   "author": "Joshua Brewster and Garrett Flynn",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "webcomponents-lite": "^0.6.0",
     "objectlisteners": "^1.0.2"
   },
   "bugs": {

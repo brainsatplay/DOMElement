@@ -1,6 +1,14 @@
 // Proper DOM fragment implementation which also creates customElements you can use like <so></so>. High HTML5 performance via template fragments
 
 //extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
+export function addCustomElement(cls, name, extend='div') {
+
+    console.log(cls.name)
+
+    if(name) customElements.define(name.toLowerCase(),cls, {extends:extend});
+    else customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend}); //declare the class
+}
+
 export class DOMElement extends HTMLElement { 
 
     props = {test:true};
@@ -12,71 +20,101 @@ export class DOMElement extends HTMLElement {
         ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
         onresize:undefined, //window.onresize event (props) => {}
         onchange:undefined,  //if props change, e.g. re-render? (props) => {}
-        parentNode:undefined, //set parentNode manually in js
+        parent:undefined, //set parentNode manually in js
         template:undefined, //template string or function (props) => {return `e.g. ${props}`;}
         name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
     }
 
-    constructor( 
-        props=undefined, //props to render a template string function
-        options={ //each function passes 'props'        
-            oncreate:undefined, //when the node is created e.g. setting up buttons (props) => {}
-            ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
-            onresize:undefined, //window.onresize event (props) => {}
-            onchange:undefined,  //if props change, e.g. re-render? (props) => {}
-            template:undefined, //template string `` or function (props) => {return `e.g. ${props}`;}
-            parent:undefined, //specify parentNode manually in js
-            name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
+    static observedAttributes = ["props","options"];
+
+    attributeChangedCallback(name, old, val) {
+        if(name === 'props') {
+            let newProps = val;
+            this.state.setState({props:newProps});
         }
-    ) {
+        if(name === 'options'){
+
+            let options = val;
+            this.options=options;
+
+            if(options.oncreate) {
+                this.oncreate = options.oncreate;
+            }
+            if(options.template) {
+            this.template = template; //function or string;
+
+                if(typeof template === 'function') this.templateString = template(this.props); //can pass a function
+                else this.templateString = template;
+                
+                //render the new template
+                this.render(this.props);
+                this.oncreate(this.props);
+            }
+            if(options.onresize) {
+                try {window.removeEventListener('resize',this.onresize);} catch(err) {}
+                this.onresize = options.onresize;
+                window.addEventListener('resize',this.onresize);
+            }
+            if(options.ondelete) {
+                this.ondelete = () => {
+                    options.ondelete();
+                    window.removeEventListener('resize',this.onresize);
+                    this.state.unsubscribeTrigger('props');
+                }
+            }
+            if(options.onchange) {
+                this.onchange = options.onchange;
+                this.state.data.props = this.props;
+                this.state.subscribeTrigger('props',this.onchange);
+            }
+
+            if(options.name) customElements.define(options.name.toLowerCase(),this); //declare the class
+
+        }
+    }
+
+    constructor() {
         super();
 
-        if(props) {
-            Object.assign(this.props,props);
-        }
         //create template
         //append node
 
-        this.options=options;
-
-        if(options.parent) {
+        if(this.options.parent) {
             if(typeof options.parent === 'string') options.parent = document.getElementById(options.parent);
             this.parentNode = options.parent; //set manually
         }
 
-        if(options.template) {
-           this.template = template; //function or string;
+        if(this.options.template) {
+            this.template = template; //function or string;
 
             if(typeof template === 'function') this.templateString = template(this.props); //can pass a function
             else this.templateString = template;
         }
 
         //render the template
-        this.render(this.props);
+        if(this.parentNode)
+            this.render(this.props);
 
-        if(options.oncreate) {
-            this.oncreate = options.oncreate;
+        if(this.options.oncreate) {
+            this.oncreate = this.options.oncreate;
             this.oncreate(this.props);
         }
-        if(options.onresize) {
+        if(this.options.onresize) {
             this.onresize = options.onresize;
             window.addEventListener('resize',this.onresize);
         }
-        if(options.ondelete) {
+        if(this.options.ondelete) {
             this.ondelete = () => {
-                options.ondelete();
+                this.options.ondelete();
                 window.removeEventListener('resize',this.onresize);
                 this.state.unsubscribeTrigger('props');
             }
         }
-        if(options.onchange) {
-            this.onchange = options.onchange;
+        if(this.options.onchange) {
+            this.onchange = this.options.onchange;
             this.state.data.props = this.props;
             this.state.subscribeTrigger('props',this.onchange);
         }
-
-        if(options.name) customElements.define(options.name.toLowerCase(),this); //declare the class
-        else customElements.define(this.constructor.name.toLowerCase(),this); //declare the class
     }
 
     get props() {
@@ -84,51 +122,15 @@ export class DOMElement extends HTMLElement {
     } 
 
     set props(newProps={}) {
-        Object.assign(this.props,newProps);
+        this.setAttribute('props',newProps);
     }
 
     get options() {
         return this.options;
     }
 
-    set options(options) {
-        
-        this.options=options;
-
-        if(options.oncreate) {
-            this.oncreate = options.oncreate;
-        }
-        if(options.template) {
-           this.template = template; //function or string;
-
-            if(typeof template === 'function') this.templateString = template(this.props); //can pass a function
-            else this.templateString = template;
-            
-            //render the new template
-            this.render(this.props);
-            this.oncreate(this.props);
-        }
-        if(options.onresize) {
-            try {window.removeEventListener('resize',this.onresize);} catch(err) {}
-            this.onresize = options.onresize;
-            window.addEventListener('resize',this.onresize);
-        }
-        if(options.ondelete) {
-            this.ondelete = () => {
-                options.ondelete();
-                window.removeEventListener('resize',this.onresize);
-                this.state.unsubscribeTrigger('props');
-            }
-        }
-        if(options.onchange) {
-            this.onchange = options.onchange;
-            this.state.data.props = this.props;
-            this.state.subscribeTrigger('props',this.onchange);
-        }
-
-        if(options.name) customElements.define(options.name.toLowerCase(),this); //declare the class
-
-        return this.options;
+    set options(options={}) {
+        this.setAttribute('options',options);
     }
 
 
@@ -144,6 +146,8 @@ export class DOMElement extends HTMLElement {
     };
 
     render = (props=this.props) => {
+
+        console.log('render')
 
         if(typeof this.template === 'function') this.templateString = template(props); //can pass a function
         else this.templateString = this.template;
@@ -167,7 +171,7 @@ export class DOMElement extends HTMLElement {
         triggers:{},
         setState(updateObj){
             Object.assign(this.pushToState,updateObj);
-    
+
             if(Object.keys(this.triggers).length > 0) {
                 // Object.assign(this.data,this.pushToState);
                 for (const prop of Object.getOwnPropertyNames(this.triggers)) {
@@ -218,4 +222,3 @@ export class DOMElement extends HTMLElement {
         }
     }
 }
-
