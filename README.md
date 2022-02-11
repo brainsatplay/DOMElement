@@ -15,12 +15,12 @@ Extend it like:
 class customelement extends DOMElement { 
   props={defaultprop:1}:
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
-  options={ //each function passes 'props'        
-      oncreate:undefined, //when the node is created e.g. setting up buttons (props) => {}
-      ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
-      onresize:undefined, //window.onresize event (props) => {}
-      onchange:undefined, //if props change, e.g. re-render? (props) => {}
-  }
+         
+  oncreate=undefined, //(props)=>{} when the node is created e.g. setting up buttons (props) => {}
+  ondelete=undefined, //(props)=>{} when the node is deleted, e.g. cleaning up events (props) => {}
+  onresize=undefined, //window.onresize event (props) => {}
+  onchanged=undefined, //if props change, e.g. re-render? (props) => {}. Using past tense to not conflict with built in onchange event in most elements
+  
 }
 
 addCustomElement(customelement); //adds the custom class to the registry before instantiating the new element

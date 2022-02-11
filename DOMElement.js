@@ -46,97 +46,96 @@ export function randomId(tag='') {
 export class DOMElement extends HTMLElement { 
 
     props = {test:true};
-    template = (props=this.props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
+    template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
     fragment = undefined;
+    
+    oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
+    onresize=undefined //(props) => {} fires on window resize
+    ondelete=undefined //(props) => {} fires after element is deleted
+    onchanged=undefined //(props) => {} fires when props change
 
-    options={ //each function passes 'props'        
-        oncreate:undefined, //when the node is created e.g. setting up buttons (props) => {}
-        ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
-        onresize:undefined, //window.onresize event (props) => {}
-        onchange:undefined,  //if props change, e.g. re-render? (props) => {}
-    }
-
-    static observedAttributes = ["props","options"];
+    static observedAttributes = ["props","options","onchanged","onresize","ondelete","oncreate"];
 
     attributeChangedCallback(name, old, val) {
-        if(name === 'props') {
+        if(name === 'onchanged') {
+            let onchanged = val;
+            if(typeof onchanged === 'string') onchanged = parseFunctionFromText(onchanged);
+            if(typeof onchanged === 'function') { 
+                this.onchanged =  onchanged;
+                this.state.data.props = this.props;
+                this.state.unsubscribeTrigger('props'); //remove any previous subs
+                this.state.subscribeTrigger('props',this.onchanged);
+            }
+        }
+        if(name === 'onresize') {
+            let onresize = val;
+            if(typeof onresize === 'string')  onresize = parseFunctionFromText(onresize);
+            if(typeof onresize === 'function') { 
+                try {window.removeEventListener('resize',this.onresize);} catch(err) {}
+                this.onresize = onresize;
+                window.addEventListener('resize',this.onresize);
+            }
+        }
+        if(name === 'ondelete') {
+            let ondelete = val;
+            if(typeof ondelete === 'string') ondelete = parseFunctionFromText(ondelete);
+            if(typeof ondelete === 'function') { 
+                this.ondelete = () => {
+                    window.removeEventListener('resize',this.onresize);
+                    this.state.unsubscribeTrigger('props');
+                    ondelete();
+                }
+            }
+        }
+        if(name === 'oncreate') { 
+            let oncreate = val;
+            if(typeof oncreate === 'string') oncreate = parseFunctionFromText(oncreate);
+            if(typeof oncreate === 'function') { 
+                this.oncreate =  oncreate;
+            }
+        }
+        if(name === 'props') { //update the props, fires any onchanged stuff
             let newProps = val;
             if(typeof newProps === 'string') newProps = JSON.parse(newProps);
 
             Object.assign(this.props,newProps);
             this.state.setState({props:this.props});
         }
-        if(name === 'options'){
+        if(name === 'template') { //change the html template
 
-            let options = val;
+            let template = val;
 
-            if(typeof options === 'string') options = JSON.parse(options);
+            this.template = options.template; //function or string;
 
-            this.options=options;
-
-            if(options.oncreate) {
-                if(typeof options.oncreate === 'string') options.oncreate = parseFunctionFromText(options.oncreate);
-                this.oncreate = options.oncreate;
-            }
-            if(options.template) {
-                this.template = options.template; //function or string;
-
-                if(typeof template === 'function') this.templateString = options.template(this.props); //can pass a function
-                else this.templateString = template;
-                
-                //render the new template
-                this.render(this.props);
-            }
-            if(options.onresize) {
-                if(typeof options.onresize === 'string') options.onresize = parseFunctionFromText(options.onresize);
-                try {window.removeEventListener('resize',this.onresize);} catch(err) {}
-                this.onresize = options.onresize;
-                window.addEventListener('resize',this.onresize);
-            }
-            if(options.ondelete) {
-                if(typeof options.ondelete === 'string') options.ondelete = parseFunctionFromText(options.ondelete);
-                this.ondelete = () => {
-                    options.ondelete();
-                    window.removeEventListener('resize',this.onresize);
-                    this.state.unsubscribeTrigger('props');
-                }
-            }
-            if(options.onchange) {
-                if(typeof options.onchange === 'string') options.onchange = parseFunctionFromText(options.onchange);
-                this.onchange = options.onchange;
-                this.state.data.props = this.props;
-                this.state.unsubscribeTrigger('props'); //remove any previous subs
-                this.state.subscribeTrigger('props',this.onchange);
-            }
+            if(typeof template === 'function') this.templateString = this.template(this.props); //can pass a function
+            else this.templateString = template;
+            
+            //render the new template
+            this.render(this.props);
 
         }
     }
 
     connectedCallback() {
-
-        if(typeof this.options.oncreate === 'function') {
-            this.oncreate = this.options.oncreate;
-        }
         
         this.render(this.props);
 
-        if(typeof this.options.onresize === 'function') {
-            this.onresize = this.options.onresize;
+        if(typeof this.onresize === 'function') {
             window.addEventListener('resize',this.onresize);
         }
         
-        if(typeof this.options.ondelete === 'function') {
+        if(typeof this.ondelete === 'function') {
+            let ondelete = this.ondelete;
             this.ondelete = () => {
-                this.options.ondelete();
                 window.removeEventListener('resize',this.onresize);
                 this.state.unsubscribeTrigger('props');
+                ondelete();
             }
         }
 
-        if(typeof this.options.onchange === 'function') {
-            this.onchange = this.options.onchange;
+        if(typeof this.onchanged === 'function') {
             this.state.data.props = this.props;
-            this.state.subscribeTrigger('props',this.onchange);
+            this.state.subscribeTrigger('props',this.onchanged);
         }
 
     }
@@ -153,24 +152,52 @@ export class DOMElement extends HTMLElement {
         this.setAttribute('props',newProps);
     }
 
-    get options() {
-        return this.options;
+    get template() {
+        return this.template;
+    } 
+
+    set template(template) {
+        this.setAttribute('template',template);
     }
 
-    set options(options={}) {
-        this.setAttribute('options',options);
+    //past tense just so it can't conflict with onchange
+    get onchanged() {
+        return this.onchanged;
+    } 
+
+    set onchanged(onchanged) {
+        this.setAttribute('onchanged',onchanged);
+    }
+
+    get onresize() {
+        return this.props;
+    } 
+
+    set onresize(onresize) {
+        this.setAttribute('onresize',onresize);
+    }
+
+    get ondelete() {
+        return this.props;
+    } 
+
+    set ondelete(ondelete) {
+        this.setAttribute('ondelete',ondelete);
+    }
+
+    get oncreate() {
+        return this.oncreate;
+    } 
+
+    set oncreate(oncreate) {
+        this.setAttribute('oncreated',oncreate);
     }
 
 
-    oncreate=(props=this.props)=>{}
-    onresize=(props=this.props)=>{}
-    ondelete=(props=this.props)=>{}
-    onchange=(props=this.props)=>{}
-
-    delete = () => { //deletes self from parentNode
+    delete = () => { //deletes self from the DOM
         this.fragment = undefined;
         this.remove();
-        this.ondelete(this.props);
+        if(this.ondelete) this.ondelete(this.props);
     };
 
     render = (props=this.props) => {
@@ -185,13 +212,11 @@ export class DOMElement extends HTMLElement {
         const fragment = t.content;
         if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
             this.removeChild(this.fragment); 
-        } else if (this.options.parent) { //first append for js-specified html
-            this.options.parent.appendChild(this);
         }
         this.fragment = fragment;
         this.appendChild(fragment);
         
-        this.oncreate(props); //set scripted behaviors
+        if(this.oncreate) this.oncreate(props); //set scripted behaviors
     }
 
     state = {
@@ -208,7 +233,7 @@ export class DOMElement extends HTMLElement {
                         this.data[prop] = this.pushToState[prop]
                         delete this.pushToState[prop];
                         this.triggers[prop].forEach((obj)=>{
-                            obj.onchange(this.data[prop]);
+                            obj.onchanged(this.data[prop]);
                         });
                     }
                 }
@@ -216,13 +241,13 @@ export class DOMElement extends HTMLElement {
 
             return this.pushToState;
         },
-        subscribeTrigger(key,onchange=(res)=>{}){
+        subscribeTrigger(key,onchanged=(res)=>{}){
             if(key) {
                 if(!this.triggers[key]) {
                     this.triggers[key] = [];
                 }
                 let l = this.triggers[key].length;
-                this.triggers[key].push({idx:l, onchange:onchange});
+                this.triggers[key].push({idx:l, onchanged:onchanged});
                 return this.triggers[key].length-1;
             } else return undefined;
         },
@@ -240,10 +265,10 @@ export class DOMElement extends HTMLElement {
                 }
             }
         },
-        subscribeTriggerOnce(key=undefined,onchange=(value)=>{}) {
+        subscribeTriggerOnce(key=undefined,onchanged=(value)=>{}) {
             let sub;
             let changed = (value) => {
-                onchange(value);
+                onchanged(value);
                 this.unsubscribeTrigger(key,sub);
             }
 
@@ -251,3 +276,4 @@ export class DOMElement extends HTMLElement {
         }
     }
 }
+
