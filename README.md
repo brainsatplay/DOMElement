@@ -1,18 +1,53 @@
 ## DOMFragment.js
+//By Joshua Brewster (AGPL v3.0)
+
 
 `npm i domfragment`
 
 
 This is a simple wrapper for the native template fragments in javascript.
-It's not like lithtml or React where you get custom text recognition
-for the html, just good old passing template strings. This lets you set up
-the various event handlers for the component you are rendering when you create the fragment easily, offloading a lot of HTML and javascript spaghetti and rendering as high performance DOM fragments. iOS or some browsers will complain, but screw them :P 
 
+DOMElement extends the HTMLElement class and implements a template fragment rendering method, and they become usable like <customelement/> 
+and can be extended e.g. 
 
+```js
+class customelement extends DOMElement { 
+  props={defaultprop:1}:
+  template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
+}
+```
+ 
+where all that needs to be set is the template variable.
 
-//By Joshua Brewster (AGPL v3.0)
+Then this *should* work in html:
+
+```js
+<customelement props={a:1,b:2,c:3}/>
+```
+
+or
+
+```js
+
+let elm = new customelement(
+  {prop2:'abc123'},
+  options={ //each function passes 'props'        
+    oncreate:undefined, //when the node is created e.g. setting up buttons (props) => {}
+    ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
+    onresize:undefined, //window.onresize event (props) => {}
+    onchange:undefined,  //if props change, e.g. re-render? (props) => {}
+    template:undefined, //template string `` or function (props) => {return `e.g. ${props}`;}
+    name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
+  }
+)
 
 ```
+
+
+DOMFragment is the older method as described below, not as clean:
+
+
+```js
 import {DOMFragment} from 'domfragment'
 
 
