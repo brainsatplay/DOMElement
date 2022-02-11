@@ -12,6 +12,7 @@ export class DOMElement extends HTMLElement {
         ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
         onresize:undefined, //window.onresize event (props) => {}
         onchange:undefined,  //if props change, e.g. re-render? (props) => {}
+        parentNode:undefined, //set parentNode manually in js
         template:undefined, //template string or function (props) => {return `e.g. ${props}`;}
         name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
     }
@@ -24,6 +25,7 @@ export class DOMElement extends HTMLElement {
             onresize:undefined, //window.onresize event (props) => {}
             onchange:undefined,  //if props change, e.g. re-render? (props) => {}
             template:undefined, //template string `` or function (props) => {return `e.g. ${props}`;}
+            parent:undefined, //specify parentNode manually in js
             name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
         }
     ) {
@@ -36,6 +38,11 @@ export class DOMElement extends HTMLElement {
         //append node
 
         this.options=options;
+
+        if(options.parent) {
+            if(typeof options.parent === 'string') options.parent = document.getElementById(options.parent);
+            this.parentNode = options.parent; //set manually
+        }
 
         if(options.template) {
            this.template = template; //function or string;
@@ -130,8 +137,9 @@ export class DOMElement extends HTMLElement {
     ondelete=(props=this.props)=>{}
     onchange=(props=this.props)=>{}
 
-    remove = () => {
+    remove = () => { //deletes self from parentNode
         this.parentNode.removeChild(this);
+        this.fragment = undefined;
         this.ondelete(this.props);
     };
 
@@ -143,7 +151,11 @@ export class DOMElement extends HTMLElement {
         const t = document.createElement('template');
         t.innerHTML = this.templateString;
         const fragment = t.content;
-        if(this.fragment) this.removeChild(this.fragment); 
+        if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
+            this.removeChild(this.fragment); 
+        } else if (this.options.parentNode) { //first append for js-specified html
+            this.parentNode.appendChild(this);
+        }
         this.fragment = fragment;
         this.appendChild(fragment);
         this.oncreate(props);
