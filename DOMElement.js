@@ -6,7 +6,7 @@ export class DOMElement extends HTMLElement {
     props = {test:true};
     template = (props=this.props) => {return `<div>Custom Fragment Props: ${JSON.stringify(props)}</div>`}; //override the default template string by extending the class, or use options.template if calling the base class
     fragment = undefined;
-    
+
     options={ //each function passes 'props'        
         oncreate:undefined, //when the node is created e.g. setting up buttons (props) => {}
         ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
@@ -80,7 +80,11 @@ export class DOMElement extends HTMLElement {
         Object.assign(this.props,newProps);
     }
 
-    get options(options) {
+    get options() {
+        return this.options;
+    }
+
+    set options(options) {
         
         this.options=options;
 
@@ -120,9 +124,6 @@ export class DOMElement extends HTMLElement {
         return this.options;
     }
 
-    set options() {
-
-    }
 
     oncreate=(props=this.props)=>{}
     onresize=(props=this.props)=>{}
