@@ -54,7 +54,7 @@ export class DOMElement extends HTMLElement {
     ondelete=undefined //(props) => {} fires after element is deleted
     onchanged=undefined //(props) => {} fires when props change
 
-    static observedAttributes = ["props","options","onchanged","onresize","ondelete","oncreate"];
+    static observedAttributes = ["props","options","onchanged","onresize","ondelete","oncreate","template"];
 
     attributeChangedCallback(name, old, val) {
         if(name === 'onchanged') {
