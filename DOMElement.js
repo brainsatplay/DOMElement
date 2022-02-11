@@ -153,7 +153,7 @@ export class DOMElement extends HTMLElement {
         const fragment = t.content;
         if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
             this.removeChild(this.fragment); 
-        } else if (this.options.parentNode) { //first append for js-specified html
+        } else if (this.options.parent) { //first append for js-specified html
             this.parentNode.appendChild(this);
         }
         this.fragment = fragment;

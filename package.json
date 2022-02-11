@@ -1,6 +1,6 @@
 {
   "name": "domfragment",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "DOM Fragment rendering and event system for writing html with template strings and javascript. Includes our StateManager for building whole applications with this with native HTML/Javascript.",
   "main": "index.js",
   "type": "module",
@@ -19,7 +19,7 @@
   "author": "Joshua Brewster and Garrett Flynn",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "objectlisteners": "1.0.2"
+    "objectlisteners": "^1.0.2"
   },
   "bugs": {
     "url": "https://github.com/brainsatplay/DOMFragment/issues"

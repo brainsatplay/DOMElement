@@ -37,6 +37,7 @@ let elm = new customelement(
     onresize:undefined, //window.onresize event (props) => {}
     onchange:undefined,  //if props change, e.g. re-render? (props) => {}
     template:undefined, //template string `` or function (props) => {return `e.g. ${props}`;}
+    parent:undefined, //specify parentNode manually in js
     name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
   }
 )
