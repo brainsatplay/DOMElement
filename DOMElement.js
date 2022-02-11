@@ -1,5 +1,35 @@
 // Proper DOM fragment implementation which also creates customElements you can use like <so></so>. High HTML5 performance via template fragments
+export function parseFunctionFromText(method) {
+    //Get the text inside of a function (regular or arrow);
+    let getFunctionBody = (methodString) => {
+    return methodString.replace(/^\W*(function[^{]+\{([\s\S]*)\}|[^=]+=>[^{]*\{([\s\S]*)\}|[^=]+=>(.+))/i, '$2$3$4');
+    }
 
+    let getFunctionHead = (methodString) => {
+    let startindex = methodString.indexOf(')');
+    return methodString.slice(0, methodString.indexOf('{',startindex) + 1);
+    }
+
+    let newFuncHead = getFunctionHead(method);
+    let newFuncBody = getFunctionBody(method);
+
+    let newFunc;
+    if (newFuncHead.includes('function ')) {
+    let varName = newFuncHead.split('(')[1].split(')')[0]
+    newFunc = new Function(varName, newFuncBody);
+    } else {
+    if(newFuncHead.substring(0,6) === newFuncBody.substring(0,6)) {
+        //newFuncBody = newFuncBody.substring(newFuncHead.length);
+        let varName = newFuncHead.split('(')[1].split(')')[0]
+        //console.log(varName, newFuncHead ,newFuncBody);
+        newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
+    }
+    else newFunc = eval(newFuncHead + newFuncBody + "}");
+    }
+
+    return newFunc;
+
+}
 //extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
 export function addCustomElement(cls, name, extend='div') {
 
@@ -31,33 +61,40 @@ export class DOMElement extends HTMLElement {
     attributeChangedCallback(name, old, val) {
         if(name === 'props') {
             let newProps = val;
+            if(typeof newProps === 'string') newProps = JSON.parse(newProps);
+
             Object.assign(this.props,newProps);
             this.state.setState({props:this.props});
         }
         if(name === 'options'){
 
             let options = val;
+
+            if(typeof options === 'string') options = JSON.parse(options);
+
             this.options=options;
 
             if(options.oncreate) {
+                if(typeof options.oncreate === 'string') options.oncreate = parseFunctionFromText(options.oncreate);
                 this.oncreate = options.oncreate;
             }
             if(options.template) {
-                this.template = template; //function or string;
+                this.template = options.template; //function or string;
 
-                if(typeof template === 'function') this.templateString = template(this.props); //can pass a function
+                if(typeof template === 'function') this.templateString = options.template(this.props); //can pass a function
                 else this.templateString = template;
                 
                 //render the new template
                 this.render(this.props);
-                this.oncreate(this.props);
             }
             if(options.onresize) {
+                if(typeof options.onresize === 'string') options.onresize = parseFunctionFromText(options.onresize);
                 try {window.removeEventListener('resize',this.onresize);} catch(err) {}
                 this.onresize = options.onresize;
                 window.addEventListener('resize',this.onresize);
             }
             if(options.ondelete) {
+                if(typeof options.ondelete === 'string') options.ondelete = parseFunctionFromText(options.ondelete);
                 this.ondelete = () => {
                     options.ondelete();
                     window.removeEventListener('resize',this.onresize);
@@ -65,6 +102,7 @@ export class DOMElement extends HTMLElement {
                 }
             }
             if(options.onchange) {
+                if(typeof options.onchange === 'string') options.onchange = parseFunctionFromText(options.onchange);
                 this.onchange = options.onchange;
                 this.state.data.props = this.props;
                 this.state.subscribeTrigger('props',this.onchange);
@@ -85,7 +123,7 @@ export class DOMElement extends HTMLElement {
             this.onresize = this.options.onresize;
             window.addEventListener('resize',this.onresize);
         }
-
+        
         if(typeof this.options.ondelete === 'function') {
             this.ondelete = () => {
                 this.options.ondelete();
