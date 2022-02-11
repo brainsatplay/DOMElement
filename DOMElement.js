@@ -105,6 +105,7 @@ export class DOMElement extends HTMLElement {
                 if(typeof options.onchange === 'string') options.onchange = parseFunctionFromText(options.onchange);
                 this.onchange = options.onchange;
                 this.state.data.props = this.props;
+                this.state.unsubscribeTrigger('props'); //remove any previous subs
                 this.state.subscribeTrigger('props',this.onchange);
             }
 
