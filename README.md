@@ -34,30 +34,13 @@ Then this *should* work in html:
 <customelement- props='{"a":"1","b":"2","c":"3"}'><customelement- /> 
 ```
 
-Custom elements have to have a - in the names for whatever reason, they are auto added on the end of the class name if none specified in addCustomElement
+Custom elements have to have a '-' in the names for whatever reason, they are auto added on the end of the class name if none specified in addCustomElement
 
-or
 
-```js
-
-let elm = new customelement(
-  {prop2:'abc123'},
-  options={ //each function passes 'props'        
-    oncreate:undefined, //when the node is created e.g. setting up buttons (props) => {}
-    ondelete:undefined, //when the node is deleted, e.g. cleaning up events (props) => {}
-    onresize:undefined, //window.onresize event (props) => {}
-    onchange:undefined,  //if props change, e.g. re-render? (props) => {}
-    template:undefined, //template string `` or function (props) => {return `e.g. ${props}`;}
-    parent:undefined, //specify parentNode manually in js
-    name:undefined //e.g. "customelement" can define a custom name for the element here instead of using the class name. Removes need to extend the class
-  }
-)
-
-```
 
 
 DOMFragment is the older method as described below, not as clean:
-
+IOS does not like this method.
 
 ```js
 import {DOMFragment} from 'domfragment'
