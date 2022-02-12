@@ -21,6 +21,8 @@ export class DOMElement extends HTMLElement {
                 this.state.data.props = this.props;
                 this.state.unsubscribeTrigger('props'); //remove any previous subs
                 this.state.subscribeTrigger('props',this.onchanged);
+                let changed = new CustomEvent('changed', {detail: { props:this.props }});
+                this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
             }
         }
         if(name === 'onresize') {
@@ -66,9 +68,9 @@ export class DOMElement extends HTMLElement {
             if(typeof template === 'function') this.templateString = this.template(this.props); //can pass a function
             else this.templateString = template;
             
-            let created = new CustomEvent('created', {detail: { props:this.props }});
             //render the new template
             this.render(this.props);
+            let created = new CustomEvent('created', {detail: { props:this.props }});
             this.dispatchEvent(created);
 
         }
