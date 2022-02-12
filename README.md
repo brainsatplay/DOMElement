@@ -35,6 +35,25 @@ Then this *should* work in html:
 ```html
 <customelement- props='{"a":"1","b":"2","c":"3"}'><customelement- /> 
 ```
+Can define props, onresize, onchanged, oncreate, ondelete, and even template just like other stock html functions.
+
+
+```js
+let elm = document.querySelector('customelement-');
+
+elm.addEventListener('resized',(e) => {
+  console.log(e.target.props);
+});
+
+elm.addEventListener('changed',(e) => {
+  console.log(e.target.props);
+});
+
+elm.addEventListener('deleted',(e) => {
+  console.log(e.target.props);
+});
+
+```
 
 Custom elements have to have a '-' in the names for whatever reason, they are auto added on the end of the class name if none specified in addCustomElement
 

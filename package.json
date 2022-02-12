@@ -1,6 +1,6 @@
 {
   "name": "fragelement",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Web component wrapper class with additional utilities for easier rendering logic controls. Uses document fragments that can be re-rendered more quickly",
   "main": "index.js",
   "type": "module",

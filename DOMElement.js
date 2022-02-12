@@ -66,18 +66,33 @@ export class DOMElement extends HTMLElement {
             if(typeof template === 'function') this.templateString = this.template(this.props); //can pass a function
             else this.templateString = template;
             
+            let created = new CustomEvent('created', {detail: { props:this.props }});
             //render the new template
             this.render(this.props);
+            this.dispatchEvent(created);
 
         }
     }
 
     connectedCallback() {
+
+        
+        let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
+        let changed = new CustomEvent('changed', {detail: { props:this.props }});
+        let deleted = new CustomEvent('deleted', {detail: { props:this.props }});
+        let created = new CustomEvent('created', {detail: { props:this.props }});
+        //now we can add event listeners for our custom events
         
         this.render(this.props);
+        this.dispatchEvent(created);
+
+        this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
 
         if(typeof this.onresize === 'function') {
-            window.addEventListener('resize',this.onresize);
+            window.addEventListener('resize',()=>{
+                this.onresize();
+                this.dispatchEvent(resizeevent);
+            });
         }
         
         if(typeof this.ondelete === 'function') {
@@ -86,6 +101,7 @@ export class DOMElement extends HTMLElement {
                 window.removeEventListener('resize',this.onresize);
                 this.state.unsubscribeTrigger('props');
                 ondelete();
+                this.dispatchEvent(deleted);
             }
         }
 
