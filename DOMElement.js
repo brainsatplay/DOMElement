@@ -132,6 +132,18 @@ export class DOMElement extends HTMLElement {
         this.setAttribute('template',template);
     }
 
+    get render() {
+        return this.render;
+    }
+
+    get delete() {
+        return this.delete;
+    }
+
+    get state() {
+        return this.state;
+    }
+
     //past tense just so it can't conflict with onchange
     get onchanged() {
         return this.onchanged;
