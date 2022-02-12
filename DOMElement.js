@@ -75,7 +75,6 @@ export class DOMElement extends HTMLElement {
     }
 
     connectedCallback() {
-
         
         let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
         let changed = new CustomEvent('changed', {detail: { props:this.props }});
