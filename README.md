@@ -5,7 +5,7 @@
 `npm i fragelement`
 
 
-This is a simple wrapper for the native template fragments in javascript.
+This is a simple wrapper for the native web components with template fragments in javascript.
 
 DOMElement extends the HTMLElement class and implements a template fragment rendering method:
 
