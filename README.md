@@ -1,4 +1,4 @@
-## DOMFragment.js
+## DOMElement.js
 //By Joshua Brewster (AGPL v3.0)
 
 
@@ -60,7 +60,7 @@ Custom elements have to have a '-' in the names for whatever reason, they are au
 
 
 
-DOMFragment is the older method as described below, not as clean:
+#### DOMFragment is an older method as described below, not as clean:
 IOS does not like this method.
 
 `npm i domfragment`
