@@ -234,13 +234,14 @@ export class DOMElement extends HTMLElement {
 }
 
 //extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
-export function addCustomElement(cls, name, extend='div') {
-    if(typeof process !== 'undefined')  {
+export function addCustomElement(cls, name, extend=null) {
+    if(extend) {
         if(name) window.customElements.define(name, cls, {extends:extend});
-        else window.customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend}); 
-    } else {
+        else window.customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend});
+    }
+    else {
         if(name) window.customElements.define(name, cls);
-        else window.customElements.define(cls.name.toLowerCase()+'-', cls); 
+        else window.customElements.define(cls.name.toLowerCase()+'-',cls);
     }
 }
 
