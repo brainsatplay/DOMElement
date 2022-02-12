@@ -1,59 +1,15 @@
-// Proper DOM fragment implementation which also creates customElements you can use like <so></so>. High HTML5 performance via template fragments
-export function parseFunctionFromText(method) {
-    //Get the text inside of a function (regular or arrow);
-    let getFunctionBody = (methodString) => {
-    return methodString.replace(/^\W*(function[^{]+\{([\s\S]*)\}|[^=]+=>[^{]*\{([\s\S]*)\}|[^=]+=>(.+))/i, '$2$3$4');
-    }
-
-    let getFunctionHead = (methodString) => {
-    let startindex = methodString.indexOf(')');
-    return methodString.slice(0, methodString.indexOf('{',startindex) + 1);
-    }
-
-    let newFuncHead = getFunctionHead(method);
-    let newFuncBody = getFunctionBody(method);
-
-    let newFunc;
-    if (newFuncHead.includes('function ')) {
-    let varName = newFuncHead.split('(')[1].split(')')[0]
-    newFunc = new Function(varName, newFuncBody);
-    } else {
-    if(newFuncHead.substring(0,6) === newFuncBody.substring(0,6)) {
-        //newFuncBody = newFuncBody.substring(newFuncHead.length);
-        let varName = newFuncHead.split('(')[1].split(')')[0]
-        //console.log(varName, newFuncHead ,newFuncBody);
-        newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
-    }
-    else newFunc = eval(newFuncHead + newFuncBody + "}");
-    }
-
-    return newFunc;
-
-}
-//extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
-export function addCustomElement(cls, name, extend='div') {
-
-    console.log(cls.name)
-
-    if(name) customElements.define(name.toLowerCase(),cls, {extends:extend});
-    else customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend}); //declare the class
-}
-
-export function randomId(tag='') {
-    return tag+Math.floor(Math.random()*1000000000000000);
-}
 
 export class DOMElement extends HTMLElement { 
-
-    props = {test:true};
     template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
-    fragment = undefined;
+    props = {test:true};
     
     oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
     onresize=undefined //(props) => {} fires on window resize
     ondelete=undefined //(props) => {} fires after element is deleted
     onchanged=undefined //(props) => {} fires when props change
 
+    fragment = undefined;
+    
     static observedAttributes = ["props","options","onchanged","onresize","ondelete","oncreate","template"];
 
     attributeChangedCallback(name, old, val) {
@@ -275,5 +231,48 @@ export class DOMElement extends HTMLElement {
             sub = this.subscribeTrigger(key,changed);
         }
     }
+}
+
+//extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
+export function addCustomElement(cls, name, extend='div') {
+    if(name) customElements.define(name.toLowerCase(),cls, {extends:extend});
+    else customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend}); //declare the class
+}
+
+export function randomId(tag='') {
+    return tag+Math.floor(Math.random()*1000000000000000);
+}
+
+// Proper DOM fragment implementation which also creates customElements you can use like <so></so>. High HTML5 performance via template fragments
+export function parseFunctionFromText(method) {
+    //Get the text inside of a function (regular or arrow);
+    let getFunctionBody = (methodString) => {
+    return methodString.replace(/^\W*(function[^{]+\{([\s\S]*)\}|[^=]+=>[^{]*\{([\s\S]*)\}|[^=]+=>(.+))/i, '$2$3$4');
+    }
+
+    let getFunctionHead = (methodString) => {
+    let startindex = methodString.indexOf(')');
+    return methodString.slice(0, methodString.indexOf('{',startindex) + 1);
+    }
+
+    let newFuncHead = getFunctionHead(method);
+    let newFuncBody = getFunctionBody(method);
+
+    let newFunc;
+    if (newFuncHead.includes('function ')) {
+    let varName = newFuncHead.split('(')[1].split(')')[0]
+    newFunc = new Function(varName, newFuncBody);
+    } else {
+    if(newFuncHead.substring(0,6) === newFuncBody.substring(0,6)) {
+        //newFuncBody = newFuncBody.substring(newFuncHead.length);
+        let varName = newFuncHead.split('(')[1].split(')')[0]
+        //console.log(varName, newFuncHead ,newFuncBody);
+        newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
+    }
+    else newFunc = eval(newFuncHead + newFuncBody + "}");
+    }
+
+    return newFunc;
+
 }
 

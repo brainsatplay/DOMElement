@@ -2,7 +2,7 @@
 //By Joshua Brewster (AGPL v3.0)
 
 
-`npm i domfragment`
+`npm i fragelement`
 
 
 This is a simple wrapper for the native template fragments in javascript.
@@ -14,6 +14,8 @@ Extend it like:
 ```js
 class customelement extends DOMElement { 
   props={defaultprop:1}:
+
+  //The template can be an imported html file when building in node.js for a better experience
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
          
   oncreate=undefined, //(props)=>{} when the node is created e.g. setting up buttons (props) => {}
@@ -41,6 +43,8 @@ Custom elements have to have a '-' in the names for whatever reason, they are au
 
 DOMFragment is the older method as described below, not as clean:
 IOS does not like this method.
+
+`npm i domfragment`
 
 ```js
 import {DOMFragment} from 'domfragment'
