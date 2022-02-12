@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/brainsatplay/DOMFragment.git"
+    "url": "git+https://github.com/brainsatplay/DOMElement.git"
   },
   "keywords": [
     "dom",
@@ -19,7 +19,7 @@
   "author": "Joshua Brewster and Garrett Flynn",
   "license": "AGPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/brainsatplay/DOMFragment/issues"
+    "url": "https://github.com/brainsatplay/DOMElement/issues"
   },
-  "homepage": "https://github.com/brainsatplay/DOMFragment#readme"
+  "homepage": "https://github.com/brainsatplay/DOMElement#readme"
 }
