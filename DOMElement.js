@@ -371,9 +371,15 @@ export function parseFunctionFromText(method) {
                 //console.log(varName, newFuncHead ,newFuncBody);
                 newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
             }
-            else newFunc = eval(newFuncHead + newFuncBody + "}");
+            else {
+                try {
+                    newFunc = eval(newFuncHead + newFuncBody + "}");
+                } catch(err) {
+                    newFunc = eval(method); //try just evaluating the method
+                }
             }
         }
+    }
     catch (err) {}
 
     return newFunc;
