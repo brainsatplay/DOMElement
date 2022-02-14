@@ -1,6 +1,8 @@
 ## DOMElement.js
 //By Joshua Brewster (AGPL v3.0)
 
+![fragelement-status](https://img.shields.io/npm/v/fragelement.svg) 
+![fragelement-downloads](https://img.shields.io/npm/dt/fragelement.svg)
 
 `npm i fragelement`
 
@@ -13,7 +15,7 @@ DOMElement extends the HTMLElement class and implements a template fragment rend
 
 Extend it like:
 ```js
-class customelement extends DOMElement { 
+class CustomElement extends DOMElement { 
   props={defaultprop:1}:
 
   //The template can be an imported html file when building in node.js for a better experience
@@ -26,7 +28,7 @@ class customelement extends DOMElement {
   
 }
 
-addCustomElement(customelement); //adds the custom class to the registry before instantiating the new element
+CustomElement.addElement(); //adds the custom class to the window's built-in customElementRegistry before instantiating the new element
 ```
  
 where all that needs to be set is the template variable.
