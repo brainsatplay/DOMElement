@@ -91,7 +91,8 @@ export class DOMElement extends HTMLElement {
         else { //arbitrary attributes
             let parsed = val;
             if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
-                name = name.split('_').shift()
+                name = name.split('_')
+                name.shift()
                 name = name.join();
                 parsed = parseFunctionFromText(val);  
             }

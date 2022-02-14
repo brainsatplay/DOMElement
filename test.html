@@ -173,7 +173,8 @@ class DOMElement extends HTMLElement {
             if(!this[name]) { //get/set/observe arbitrary attributes
                 let parsed = att.value;
                 if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
-                    name = name.split('_').shift()
+                    name = name.split('_')
+                    name.shift()
                     name = name.join();
                     parsed = parseFunctionFromText(att.value);  
                 }
@@ -396,7 +397,12 @@ class DOMElement extends HTMLElement {
     </script>
 </head>
 <body>
-    <customelement- props='{"a":"1"}' testvalue="123"></customelement->
+    <script>
+        function foo(x=123){ console.log(x) }
+    </script>
+
+
+    <customelement- props='{"a":"1"}' testvalue="123" eval_foo="foo(456)"></customelement->
 
     <script>
         let elem = document.getElementsByTagName('customelement-')[0];
