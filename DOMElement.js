@@ -89,8 +89,9 @@ export class DOMElement extends HTMLElement {
 
         }
         else {
-            this[name] = val; // set arbitrary props 
-            this.props[name] = val; //reflect it in the props object
+            let parsed = JSON.parse(val);
+            this[name] = parsed; // set arbitrary props 
+            this.props[name] = parsed //reflect it in the props object
             //this.props[name] = val; //set arbitrary props via attributes
         }
     }
@@ -116,7 +117,7 @@ export class DOMElement extends HTMLElement {
                         set(val) { this.setAttribute(name, val); }
                     }
                 )
-                this.props[name] = att.value;
+                this.props[name] = JSON.parse(att.value);
                 this.obsAttributes.push(name);
             }
             
