@@ -88,8 +88,15 @@ export class DOMElement extends HTMLElement {
             this.dispatchEvent(created);
 
         }
-        else {
-            let parsed = JSON.parse(val);
+        else { //arbitrary attributes
+            let parsed = val;
+            if(name.includes('eval')) { // e.g. <custom-  eval_input="(input)=>{console.log(input);}"></custom->
+                parsed = parseFunctionFromText(val);  
+            }
+            else if (typeof val === 'string') {
+                parsed = JSON.parse(val)
+            }
+            
             this[name] = parsed; // set arbitrary props 
             this.props[name] = parsed //reflect it in the props object
             //this.props[name] = val; //set arbitrary props via attributes
@@ -113,11 +120,20 @@ export class DOMElement extends HTMLElement {
             if(!this[name]) { //get/set/observe arbitrary attributes
                 Object.defineProperties(
                     this, att, {
-                        get() { return this.getAttribute(name); },
+                        writable:true,
+                        get() { return this[name]; },
                         set(val) { this.setAttribute(name, val); }
                     }
                 )
-                this.props[name] = JSON.parse(att.value);
+                let parsed = att.value;
+                if(name.includes('eval')) { // e.g. <custom-  eval_input="(input)=>{console.log(input);}"></custom->
+                    parsed = parseFunctionFromText(att.value);  
+                }
+                else if (typeof att.value === 'string') {
+                    parsed = JSON.parse(att.value)
+                }
+                this[name] = parsed;
+                this.props[name] = parsed; //set on props too (e.g. to more easily modify render conditions without stringifying an object)
                 this.obsAttributes.push(name);
             }
             
@@ -340,18 +356,21 @@ export function parseFunctionFromText(method) {
     let newFuncBody = getFunctionBody(method);
 
     let newFunc;
-    if (newFuncHead.includes('function ')) {
-    let varName = newFuncHead.split('(')[1].split(')')[0]
-    newFunc = new Function(varName, newFuncBody);
-    } else {
-    if(newFuncHead.substring(0,6) === newFuncBody.substring(0,6)) {
-        //newFuncBody = newFuncBody.substring(newFuncHead.length);
-        let varName = newFuncHead.split('(')[1].split(')')[0]
-        //console.log(varName, newFuncHead ,newFuncBody);
-        newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
-    }
-    else newFunc = eval(newFuncHead + newFuncBody + "}");
-    }
+    try{
+        if (newFuncHead.includes('function ')) {
+            let varName = newFuncHead.split('(')[1].split(')')[0]
+            newFunc = new Function(varName, newFuncBody);
+        } else {
+            if(newFuncHead.substring(0,6) === newFuncBody.substring(0,6)) {
+                //newFuncBody = newFuncBody.substring(newFuncHead.length);
+                let varName = newFuncHead.split('(')[1].split(')')[0]
+                //console.log(varName, newFuncHead ,newFuncBody);
+                newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
+            }
+            else newFunc = eval(newFuncHead + newFuncBody + "}");
+            }
+        }
+    catch (err) {}
 
     return newFunc;
 
