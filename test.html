@@ -165,21 +165,23 @@ class DOMElement extends HTMLElement {
             let name = att.name;
             //console.log(name,this.getAttribute(name),this[name])
             if(!this[name]) { //get/set/observe arbitrary attributes
-                Object.defineProperties(
-                    this, att, {
-                        writable:true,
-                        get() { return this[name]; },
-                        set(val) { this.setAttribute(name, val); }
-                    }
-                )
                 let parsed = att.value;
-                if(name.includes('eval')) { // e.g. <custom-  eval_input="(input)=>{console.log(input);}"></custom->
+                if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
+                    name = name.split('_').shift()
+                    name = name.join();
                     parsed = parseFunctionFromText(att.value);  
                 }
                 else if (typeof att.value === 'string') {
                     parsed = JSON.parse(att.value)
                 }
-                this[name] = parsed;
+                Object.defineProperties(
+                    this, att, {
+                        value:parsed,
+                        writable:true,
+                        get() { return this[name]; },
+                        set(val) { this.setAttribute(name, val); }
+                    }
+                )
                 this.props[name] = parsed; //set on props too (e.g. to more easily modify render conditions without stringifying an object)
                 this.obsAttributes.push(name);
             }

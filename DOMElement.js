@@ -90,7 +90,9 @@ export class DOMElement extends HTMLElement {
         }
         else { //arbitrary attributes
             let parsed = val;
-            if(name.includes('eval')) { // e.g. <custom-  eval_input="(input)=>{console.log(input);}"></custom->
+            if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
+                name = name.split('_').shift()
+                name = name.join();
                 parsed = parseFunctionFromText(val);  
             }
             else if (typeof val === 'string') {
@@ -98,7 +100,7 @@ export class DOMElement extends HTMLElement {
             }
             
             this[name] = parsed; // set arbitrary props 
-            this.props[name] = parsed //reflect it in the props object
+            this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
             //this.props[name] = val; //set arbitrary props via attributes
         }
     }
@@ -118,22 +120,24 @@ export class DOMElement extends HTMLElement {
             let name = att.name;
             //console.log(name,this.getAttribute(name),this[name])
             if(!this[name]) { //get/set/observe arbitrary attributes
-                Object.defineProperties(
-                    this, att, {
-                        writable:true,
-                        get() { return this[name]; },
-                        set(val) { this.setAttribute(name, val); }
-                    }
-                )
                 let parsed = att.value;
-                if(name.includes('eval')) { // e.g. <custom-  eval_input="(input)=>{console.log(input);}"></custom->
+                if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
+                    name = name.split('_').shift()
+                    name = name.join();
                     parsed = parseFunctionFromText(att.value);  
                 }
                 else if (typeof att.value === 'string') {
                     parsed = JSON.parse(att.value)
                 }
-                this[name] = parsed;
-                this.props[name] = parsed; //set on props too (e.g. to more easily modify render conditions without stringifying an object)
+                Object.defineProperties(
+                    this, att, {
+                        value:parsed,
+                        writable:true,
+                        get() { return this[name]; },
+                        set(val) { this.setAttribute(name, val); }
+                    }
+                )
+                this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
                 this.obsAttributes.push(name);
             }
             
