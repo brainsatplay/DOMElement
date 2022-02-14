@@ -3,6 +3,7 @@
 
 ![fragelement-status](https://img.shields.io/npm/v/fragelement.svg) 
 ![fragelement-downloads](https://img.shields.io/npm/dt/fragelement.svg)
+![fragelem-size](https://img.shields.io/github/size/brainsatplay/DOMElement/DOMElement.js)
 
 `npm i fragelement`
 
