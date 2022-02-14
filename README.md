@@ -58,6 +58,26 @@ elm.addEventListener('deleted',(e) => {
 
 Custom elements have to have a '-' in the names for whatever reason, they are auto added on the end of the class name if none specified in addCustomElement
 
+Even more fun:
+
+```html
+<body>
+    <script>
+        function foo(x=123){ console.log(x) }
+    </script>
+
+
+    <customelement- props='{"a":"1"}' testvalue="123" eval_foo="foo(456)"></customelement->
+
+    <script>
+      
+        let elem = document.getElementsByTagName('customelement-')[0];
+        console.log(Array.from(elem.attributes)); //see dynamically added attributes, the eval_ will be evaluated (can even add or set functions)
+        console.log(elem.props)
+        console.log(elem.testvalue);
+    </script>
+</body>
+```
 
 
 
