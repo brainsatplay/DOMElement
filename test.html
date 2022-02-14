@@ -182,6 +182,7 @@ class DOMElement extends HTMLElement {
                         set(val) { this.setAttribute(name, val); }
                     }
                 )
+                this[name] = parsed;
                 this.props[name] = parsed; //set on props too (e.g. to more easily modify render conditions without stringifying an object)
                 this.obsAttributes.push(name);
             }
@@ -389,5 +390,12 @@ class DOMElement extends HTMLElement {
     </script>
 </head>
 <body>
-    <customelement- props='{"a":"1"}' butts="123"></customelement->
+    <customelement- props='{"a":"1"}' testvalue="123"></customelement->
+
+    <script>
+        let elem = document.getElementsByTagName('customelement-')[0];
+        console.log(Array.from(elem.attributes));
+        console.log(elem.props)
+        console.log(elem.testvalue);
+    </script>
 </body>

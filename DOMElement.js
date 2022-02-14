@@ -63,7 +63,7 @@ export class DOMElement extends HTMLElement {
             let oncreate = val;
             if(typeof oncreate === 'string') oncreate = parseFunctionFromText(oncreate);
             if(typeof oncreate === 'function') { 
-                this.oncreate =  oncreate;
+                this.oncreate = oncreate;
             }
         }
         else if(name === 'props') { //update the props, fires any onchanged stuff
@@ -98,7 +98,6 @@ export class DOMElement extends HTMLElement {
             else if (typeof val === 'string') {
                 parsed = JSON.parse(val)
             }
-            
             this[name] = parsed; // set arbitrary props 
             this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
             //this.props[name] = val; //set arbitrary props via attributes
@@ -137,6 +136,7 @@ export class DOMElement extends HTMLElement {
                         set(val) { this.setAttribute(name, val); }
                     }
                 )
+                this[name] = parsed;
                 this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
                 this.obsAttributes.push(name);
             }
