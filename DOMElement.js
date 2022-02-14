@@ -9,8 +9,22 @@ export class DOMElement extends HTMLElement {
     onchanged=undefined //(props) => {} fires when props change
 
     fragment = undefined;
-    
-    static observedAttributes = ["props","options","onchanged","onresize","ondelete","oncreate","template"];
+
+    obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
+ 
+    get observedAttributes() {
+        return this.obsAttributes;
+    }
+
+    get obsAttributes() {
+        return this.obsAttributes;
+    }
+
+    set obsAttributes(att) {
+        if(typeof att === 'string') {
+            this.obsAttributes.push(att);
+        } else if (Array.isArray(att)) this.obsAttributes=att;
+    }
 
     attributeChangedCallback(name, old, val) {
         if(name === 'onchanged') {
@@ -25,7 +39,7 @@ export class DOMElement extends HTMLElement {
                 this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
             }
         }
-        if(name === 'onresize') {
+        else if(name === 'onresize') {
             let onresize = val;
             if(typeof onresize === 'string')  onresize = parseFunctionFromText(onresize);
             if(typeof onresize === 'function') { 
@@ -34,7 +48,7 @@ export class DOMElement extends HTMLElement {
                 window.addEventListener('resize',this.onresize);
             }
         }
-        if(name === 'ondelete') {
+        else if(name === 'ondelete') {
             let ondelete = val;
             if(typeof ondelete === 'string') ondelete = parseFunctionFromText(ondelete);
             if(typeof ondelete === 'function') { 
@@ -45,21 +59,21 @@ export class DOMElement extends HTMLElement {
                 }
             }
         }
-        if(name === 'oncreate') { 
+        else if(name === 'oncreate') { 
             let oncreate = val;
             if(typeof oncreate === 'string') oncreate = parseFunctionFromText(oncreate);
             if(typeof oncreate === 'function') { 
                 this.oncreate =  oncreate;
             }
         }
-        if(name === 'props') { //update the props, fires any onchanged stuff
+        else if(name === 'props') { //update the props, fires any onchanged stuff
             let newProps = val;
             if(typeof newProps === 'string') newProps = JSON.parse(newProps);
 
             Object.assign(this.props,newProps);
             this.state.setState({props:this.props});
         }
-        if(name === 'template') { //change the html template
+        else if(name === 'template') { //change the html template
 
             let template = val;
 
@@ -74,16 +88,47 @@ export class DOMElement extends HTMLElement {
             this.dispatchEvent(created);
 
         }
+        else {
+            this[name] = val; // set arbitrary props 
+            this.props[name] = val; //reflect it in the props object
+            //this.props[name] = val; //set arbitrary props via attributes
+        }
     }
 
     connectedCallback() {
-        
+
+        // set initial props
+        let newProps = this.getAttribute('props');
+        if(typeof newProps === 'string') newProps = JSON.parse(newProps);
+
+        Object.assign(this.props,newProps);
+        this.state.setState({props:this.props});
+
+
+        //Observe arbitrary attributes
+        Array.from(this.attributes).forEach((att) => {
+            let name = att.name;
+            //console.log(name,this.getAttribute(name),this[name])
+            if(!this[name]) { //get/set/observe arbitrary attributes
+                Object.defineProperties(
+                    this, att, {
+                        get() { return this.getAttribute(name); },
+                        set(val) { this.setAttribute(name, val); }
+                    }
+                )
+                this.props[name] = att.value;
+                this.obsAttributes.push(name);
+            }
+            
+            //console.log(this.observedAttributes);
+        })
+
         let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
         let changed = new CustomEvent('changed', {detail: { props:this.props }});
         let deleted = new CustomEvent('deleted', {detail: { props:this.props }});
         let created = new CustomEvent('created', {detail: { props:this.props }});
         //now we can add event listeners for our custom events
-        
+
         this.render(this.props);
         this.dispatchEvent(created);
 
@@ -95,7 +140,7 @@ export class DOMElement extends HTMLElement {
                 this.dispatchEvent(resizeevent);
             });
         }
-        
+
         if(typeof this.ondelete === 'function') {
             let ondelete = this.ondelete;
             this.ondelete = () => {

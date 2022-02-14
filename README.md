@@ -4,6 +4,7 @@
 
 `npm i fragelement`
 
+[fragelement-based webcomponent app example](https://github.com/moothyknight/esbuild_base_webcomponents)
 
 This is a simple wrapper for the native web components with template fragments in javascript.
 
