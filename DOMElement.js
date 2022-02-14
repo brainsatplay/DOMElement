@@ -1,5 +1,6 @@
 
 export class DOMElement extends HTMLElement { 
+
     template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
     props = {test:true};
     
@@ -24,6 +25,14 @@ export class DOMElement extends HTMLElement {
         if(typeof att === 'string') {
             this.obsAttributes.push(att);
         } else if (Array.isArray(att)) this.obsAttributes=att;
+    }
+
+    static get tag(){return this.name.toLowerCase()+'-'} //tagName, default 'classname-'. Set as a static variable for the internal addElement to reference
+
+    //add self or a specified class to the window which can be used via html like <custom-tag></custom-tag>
+    //will default be the classname with a '-' at the end if no tag supplied
+    static addElement(tag=this.tag,cls=this,extend=undefined) {
+        addCustomElement(cls,tag,extend)
     }
 
     attributeChangedCallback(name, old, val) {
@@ -122,7 +131,8 @@ export class DOMElement extends HTMLElement {
             if(!this[name]) { //get/set/observe arbitrary attributes
                 let parsed = att.value;
                 if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
-                    name = name.split('_').shift()
+                    name = name.split('_')
+                    name.shift()
                     name = name.join();
                     parsed = parseFunctionFromText(att.value);  
                 }
@@ -330,13 +340,13 @@ export class DOMElement extends HTMLElement {
 }
 
 //extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
-export function addCustomElement(cls, name, extend=null) {
+export function addCustomElement(cls, tag, extend=null) {
     if(extend) {
-        if(name) window.customElements.define(name, cls, {extends:extend});
+        if(tag) window.customElements.define(tag, cls, {extends:extend});
         else window.customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend});
     }
     else {
-        if(name) window.customElements.define(name, cls);
+        if(tag) window.customElements.define(tag, cls);
         else window.customElements.define(cls.name.toLowerCase()+'-',cls);
     }
 }
