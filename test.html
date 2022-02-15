@@ -53,12 +53,10 @@
         }
 
         class DOMElement extends HTMLElement { 
-    
-            static get tag(){return this.name.toLowerCase()+'-'} //tagName, default 'classname-'. Set as a static variable for the internal addElement to reference
 
             template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
             props = {test:true};
-            
+
             oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
             onresize=undefined //(props) => {} fires on window resize
             ondelete=undefined //(props) => {} fires after element is deleted
@@ -67,7 +65,7 @@
             fragment = undefined;
 
             obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
-        
+
             get observedAttributes() {
                 return this.obsAttributes;
             }
@@ -82,11 +80,12 @@
                 } else if (Array.isArray(att)) this.obsAttributes=att;
             }
 
+            static get tag(){return this.name.toLowerCase()+'-'} //tagName, default 'classname-'. Set as a static variable for the internal addElement to reference
+
             //add self or a specified class to the window which can be used via html like <custom-tag></custom-tag>
             //will default be the classname with a '-' at the end if no tag supplied
             static addElement(tag=this.tag,cls=this,extend=undefined) {
-                console.log(tag,cls)
-                addCustomElement(cls,tag,extend);
+                addCustomElement(cls,tag,extend)
             }
 
             attributeChangedCallback(name, old, val) {
@@ -160,7 +159,11 @@
                         parsed = parseFunctionFromText(val);  
                     }
                     else if (typeof val === 'string') {
-                        parsed = JSON.parse(val)
+                        try {
+                            parsed = JSON.parse(val)
+                        } catch (err) {
+                            parsed = val;
+                        }
                     }
                     this[name] = parsed; // set arbitrary props 
                     this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
@@ -191,7 +194,11 @@
                             parsed = parseFunctionFromText(att.value);  
                         }
                         else if (typeof att.value === 'string') {
-                            parsed = JSON.parse(att.value)
+                            try {
+                                parsed = JSON.parse(att.value)
+                            } catch (err) {
+                                parsed = att.value;
+                            }
                         }
                         Object.defineProperties(
                             this, att, {
@@ -391,7 +398,8 @@
                     sub = this.subscribeTrigger(key,changed);
                 }
             }
-        }
+            }
+
 
 
         addCustomElement(DOMElement,'dom-');
@@ -415,7 +423,7 @@
     </script>
 
 
-    <customelement- props='{"a":"1"}' testvalue="123" eval_foo="foo(456)"></customelement->
+    <customelement- props='{"a":"1"}' teststr="abc" testvalue="123" eval_foo="foo(456)"></customelement->
 
     <script>
         let elem = document.getElementsByTagName('customelement-')[0];

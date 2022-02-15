@@ -106,7 +106,11 @@ export class DOMElement extends HTMLElement {
                 parsed = parseFunctionFromText(val);  
             }
             else if (typeof val === 'string') {
-                parsed = JSON.parse(val)
+                try {
+                    parsed = JSON.parse(val)
+                } catch (err) {
+                    parsed = val;
+                }
             }
             this[name] = parsed; // set arbitrary props 
             this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
@@ -137,7 +141,11 @@ export class DOMElement extends HTMLElement {
                     parsed = parseFunctionFromText(att.value);  
                 }
                 else if (typeof att.value === 'string') {
-                    parsed = JSON.parse(att.value)
+                    try {
+                        parsed = JSON.parse(att.value)
+                    } catch (err) {
+                        parsed = att.value;
+                    }
                 }
                 Object.defineProperties(
                     this, att, {
