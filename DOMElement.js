@@ -53,10 +53,13 @@ export class DOMElement extends HTMLElement {
         else if(name === 'onresize') {
             let onresize = val;
             if(typeof onresize === 'string')  onresize = parseFunctionFromText(onresize);
-            if(typeof onresize === 'function') { 
-                try {window.removeEventListener('resize',this.onresize);} catch(err) {}
+            if(typeof onresize === 'function') {
+                if(this.ONRESIZE) {
+                    try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
+                }
+                this.ONRESIZE = (ev) => { this.onresize(this.props); } 
                 this.onresize = onresize;
-                window.addEventListener('resize',this.onresize);
+                window.addEventListener('resize',this.ONRESIZE);
             }
         }
         else if(name === 'ondelete') {
@@ -64,9 +67,9 @@ export class DOMElement extends HTMLElement {
             if(typeof ondelete === 'string') ondelete = parseFunctionFromText(ondelete);
             if(typeof ondelete === 'function') { 
                 this.ondelete = () => {
-                    window.removeEventListener('resize',this.onresize);
+                    if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                     this.state.unsubscribeTrigger('props');
-                    ondelete();
+                    ondelete(this.props);
                 }
             }
         }
@@ -177,19 +180,18 @@ export class DOMElement extends HTMLElement {
         this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
 
         if(typeof this.onresize === 'function') {
-            window.addEventListener('resize',()=>{
-                this.onresize();
-                this.dispatchEvent(resizeevent);
-            });
+            if(this.ONRESIZE) {
+                try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
+            }
+            this.ONRESIZE = (ev) => { this.onresize(this.props); } 
+            window.addEventListener('resize',this.ONRESIZE);       
         }
 
         if(typeof this.ondelete === 'function') {
-            let ondelete = this.ondelete;
-            this.ondelete = () => {
-                window.removeEventListener('resize',this.onresize);
+            this.ondelete = (props=this.props) => {
+                if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                 this.state.unsubscribeTrigger('props');
-                ondelete();
-                this.dispatchEvent(deleted);
+                ondelete(props);
             }
         }
 
