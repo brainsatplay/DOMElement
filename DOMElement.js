@@ -3,6 +3,7 @@ export class DOMElement extends HTMLElement {
 
     template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
     props = {test:true};
+    useShadow = false; //can set to attach a shadow DOM instead (local styles)
     
     oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
     onresize=undefined //(props) => {} fires on window resize
@@ -10,6 +11,7 @@ export class DOMElement extends HTMLElement {
     onchanged=undefined //(props) => {} fires when props change
 
     fragment = undefined;
+    attachedShadow = false;
 
     obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
  
@@ -127,26 +129,26 @@ export class DOMElement extends HTMLElement {
         Object.assign(this.props,newProps);
         this.state.setState({props:this.props});
 
-
         //Observe arbitrary attributes
         Array.from(this.attributes).forEach((att) => {
             let name = att.name;
             //console.log(name,this.getAttribute(name),this[name])
-            if(!this[name]) { //get/set/observe arbitrary attributes
-                let parsed = att.value;
-                if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
-                    name = name.split('_')
-                    name.shift()
-                    name = name.join();
-                    parsed = parseFunctionFromText(att.value);  
+            //get/set/observe arbitrary attributes
+            let parsed = att.value;
+            if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
+                name = name.split('_')
+                name.shift()
+                name = name.join();
+                parsed = parseFunctionFromText(att.value);  
+            }
+            else if (typeof att.value === 'string') {
+                try {
+                    parsed = JSON.parse(att.value)
+                } catch (err) {
+                    parsed = att.value;
                 }
-                else if (typeof att.value === 'string') {
-                    try {
-                        parsed = JSON.parse(att.value)
-                    } catch (err) {
-                        parsed = att.value;
-                    }
-                }
+            }
+            if(!this[name]) {
                 Object.defineProperties(
                     this, att, {
                         value:parsed,
@@ -155,13 +157,13 @@ export class DOMElement extends HTMLElement {
                         set(val) { this.setAttribute(name, val); }
                     }
                 )
-                this[name] = parsed;
-                this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
-                this.obsAttributes.push(name);
             }
+            this[name] = parsed;
+            this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
+            this.obsAttributes.push(name);
             
             //console.log(this.observedAttributes);
-        })
+        });
 
         let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
         let changed = new CustomEvent('changed', {detail: { props:this.props }});
@@ -263,7 +265,6 @@ export class DOMElement extends HTMLElement {
         this.setAttribute('oncreated',oncreate);
     }
 
-
     delete = () => { //deletes self from the DOM
         this.fragment = undefined;
         this.remove();
@@ -281,10 +282,17 @@ export class DOMElement extends HTMLElement {
         t.innerHTML = this.templateString;
         const fragment = t.content;
         if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
-            this.removeChild(this.fragment); 
+            if(this.useShadow) {
+                this.shadowRoot.removeChild(this.fragment);
+            }   
+            else this.removeChild(this.fragment); 
         }
         this.fragment = fragment;
-        this.appendChild(fragment);
+        if(this.useShadow) {
+            if(!this.attachedShadow) this.attachShadow({mode:'open'});
+            this.shadowRoot.appendChild(fragment); //now you need to use the shadowRoot.querySelector etc.
+        }   
+        else this.appendChild(fragment);
         
         if(this.oncreate) this.oncreate(props); //set scripted behaviors
     }

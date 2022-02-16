@@ -54,351 +54,359 @@
 
         class DOMElement extends HTMLElement { 
 
-            template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
-            props = {test:true};
+template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
+props = {test:true};
+useShadow = false; //can set to attach a shadow DOM instead (local styles)
 
-            oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
-            onresize=undefined //(props) => {} fires on window resize
-            ondelete=undefined //(props) => {} fires after element is deleted
-            onchanged=undefined //(props) => {} fires when props change
+oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
+onresize=undefined //(props) => {} fires on window resize
+ondelete=undefined //(props) => {} fires after element is deleted
+onchanged=undefined //(props) => {} fires when props change
 
-            fragment = undefined;
+fragment = undefined;
+attachedShadow = false;
 
-            obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
+obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
 
-            get observedAttributes() {
-                return this.obsAttributes;
+get observedAttributes() {
+    return this.obsAttributes;
+}
+
+get obsAttributes() {
+    return this.obsAttributes;
+}
+
+set obsAttributes(att) {
+    if(typeof att === 'string') {
+        this.obsAttributes.push(att);
+    } else if (Array.isArray(att)) this.obsAttributes=att;
+}
+
+static get tag(){return this.name.toLowerCase()+'-'} //tagName, default 'classname-'. Set as a static variable for the internal addElement to reference
+
+//add self or a specified class to the window which can be used via html like <custom-tag></custom-tag>
+//will default be the classname with a '-' at the end if no tag supplied
+static addElement(tag=this.tag,cls=this,extend=undefined) {
+    addCustomElement(cls,tag,extend)
+}
+
+attributeChangedCallback(name, old, val) {
+    if(name === 'onchanged') {
+        let onchanged = val;
+        if(typeof onchanged === 'string') onchanged = parseFunctionFromText(onchanged);
+        if(typeof onchanged === 'function') { 
+            this.onchanged =  onchanged;
+            this.state.data.props = this.props;
+            this.state.unsubscribeTrigger('props'); //remove any previous subs
+            this.state.subscribeTrigger('props',this.onchanged);
+            let changed = new CustomEvent('changed', {detail: { props:this.props }});
+            this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
+        }
+    }
+    else if(name === 'onresize') {
+        let onresize = val;
+        if(typeof onresize === 'string')  onresize = parseFunctionFromText(onresize);
+        if(typeof onresize === 'function') { 
+            try {window.removeEventListener('resize',this.onresize);} catch(err) {}
+            this.onresize = onresize;
+            window.addEventListener('resize',this.onresize);
+        }
+    }
+    else if(name === 'ondelete') {
+        let ondelete = val;
+        if(typeof ondelete === 'string') ondelete = parseFunctionFromText(ondelete);
+        if(typeof ondelete === 'function') { 
+            this.ondelete = () => {
+                window.removeEventListener('resize',this.onresize);
+                this.state.unsubscribeTrigger('props');
+                ondelete();
             }
+        }
+    }
+    else if(name === 'oncreate') { 
+        let oncreate = val;
+        if(typeof oncreate === 'string') oncreate = parseFunctionFromText(oncreate);
+        if(typeof oncreate === 'function') { 
+            this.oncreate = oncreate;
+        }
+    }
+    else if(name === 'props') { //update the props, fires any onchanged stuff
+        let newProps = val;
+        if(typeof newProps === 'string') newProps = JSON.parse(newProps);
 
-            get obsAttributes() {
-                return this.obsAttributes;
+        Object.assign(this.props,newProps);
+        this.state.setState({props:this.props});
+    }
+    else if(name === 'template') { //change the html template
+
+        let template = val;
+
+        this.template = options.template; //function or string;
+
+        if(typeof template === 'function') this.templateString = this.template(this.props); //can pass a function
+        else this.templateString = template;
+        
+        //render the new template
+        this.render(this.props);
+        let created = new CustomEvent('created', {detail: { props:this.props }});
+        this.dispatchEvent(created);
+
+    }
+    else { //arbitrary attributes
+        let parsed = val;
+        if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
+            name = name.split('_')
+            name.shift()
+            name = name.join();
+            parsed = parseFunctionFromText(val);  
+        }
+        else if (typeof val === 'string') {
+            try {
+                parsed = JSON.parse(val)
+            } catch (err) {
+                parsed = val;
             }
+        }
+        this[name] = parsed; // set arbitrary props 
+        this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
+        //this.props[name] = val; //set arbitrary props via attributes
+    }
+}
 
-            set obsAttributes(att) {
-                if(typeof att === 'string') {
-                    this.obsAttributes.push(att);
-                } else if (Array.isArray(att)) this.obsAttributes=att;
+connectedCallback() {
+
+    // set initial props
+    let newProps = this.getAttribute('props');
+    if(typeof newProps === 'string') newProps = JSON.parse(newProps);
+
+    Object.assign(this.props,newProps);
+    this.state.setState({props:this.props});
+
+    //Observe arbitrary attributes
+    Array.from(this.attributes).forEach((att) => {
+        let name = att.name;
+        //console.log(name,this.getAttribute(name),this[name])
+        //get/set/observe arbitrary attributes
+        let parsed = att.value;
+        if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
+            name = name.split('_')
+            name.shift()
+            name = name.join();
+            parsed = parseFunctionFromText(att.value);  
+        }
+        else if (typeof att.value === 'string') {
+            try {
+                parsed = JSON.parse(att.value)
+            } catch (err) {
+                parsed = att.value;
             }
-
-            static get tag(){return this.name.toLowerCase()+'-'} //tagName, default 'classname-'. Set as a static variable for the internal addElement to reference
-
-            //add self or a specified class to the window which can be used via html like <custom-tag></custom-tag>
-            //will default be the classname with a '-' at the end if no tag supplied
-            static addElement(tag=this.tag,cls=this,extend=undefined) {
-                addCustomElement(cls,tag,extend)
-            }
-
-            attributeChangedCallback(name, old, val) {
-                if(name === 'onchanged') {
-                    let onchanged = val;
-                    if(typeof onchanged === 'string') onchanged = parseFunctionFromText(onchanged);
-                    if(typeof onchanged === 'function') { 
-                        this.onchanged =  onchanged;
-                        this.state.data.props = this.props;
-                        this.state.unsubscribeTrigger('props'); //remove any previous subs
-                        this.state.subscribeTrigger('props',this.onchanged);
-                        let changed = new CustomEvent('changed', {detail: { props:this.props }});
-                        this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
-                    }
+        }
+        if(!this[name]) {
+            Object.defineProperties(
+                this, att, {
+                    value:parsed,
+                    writable:true,
+                    get() { return this[name]; },
+                    set(val) { this.setAttribute(name, val); }
                 }
-                else if(name === 'onresize') {
-                    let onresize = val;
-                    if(typeof onresize === 'string')  onresize = parseFunctionFromText(onresize);
-                    if(typeof onresize === 'function') { 
-                        try {window.removeEventListener('resize',this.onresize);} catch(err) {}
-                        this.onresize = onresize;
-                        window.addEventListener('resize',this.onresize);
-                    }
-                }
-                else if(name === 'ondelete') {
-                    let ondelete = val;
-                    if(typeof ondelete === 'string') ondelete = parseFunctionFromText(ondelete);
-                    if(typeof ondelete === 'function') { 
-                        this.ondelete = () => {
-                            window.removeEventListener('resize',this.onresize);
-                            this.state.unsubscribeTrigger('props');
-                            ondelete();
-                        }
-                    }
-                }
-                else if(name === 'oncreate') { 
-                    let oncreate = val;
-                    if(typeof oncreate === 'string') oncreate = parseFunctionFromText(oncreate);
-                    if(typeof oncreate === 'function') { 
-                        this.oncreate = oncreate;
-                    }
-                }
-                else if(name === 'props') { //update the props, fires any onchanged stuff
-                    let newProps = val;
-                    if(typeof newProps === 'string') newProps = JSON.parse(newProps);
+            )
+        }
+        this[name] = parsed;
+        this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
+        this.obsAttributes.push(name);
+        
+        //console.log(this.observedAttributes);
+    });
 
-                    Object.assign(this.props,newProps);
-                    this.state.setState({props:this.props});
-                }
-                else if(name === 'template') { //change the html template
+    let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
+    let changed = new CustomEvent('changed', {detail: { props:this.props }});
+    let deleted = new CustomEvent('deleted', {detail: { props:this.props }});
+    let created = new CustomEvent('created', {detail: { props:this.props }});
+    //now we can add event listeners for our custom events
 
-                    let template = val;
+    this.render(this.props);
+    this.dispatchEvent(created);
 
-                    this.template = options.template; //function or string;
+    this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
 
-                    if(typeof template === 'function') this.templateString = this.template(this.props); //can pass a function
-                    else this.templateString = template;
-                    
-                    //render the new template
-                    this.render(this.props);
-                    let created = new CustomEvent('created', {detail: { props:this.props }});
-                    this.dispatchEvent(created);
+    if(typeof this.onresize === 'function') {
+        window.addEventListener('resize',()=>{
+            this.onresize();
+            this.dispatchEvent(resizeevent);
+        });
+    }
 
-                }
-                else { //arbitrary attributes
-                    let parsed = val;
-                    if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
-                        name = name.split('_')
-                        name.shift()
-                        name = name.join();
-                        parsed = parseFunctionFromText(val);  
-                    }
-                    else if (typeof val === 'string') {
-                        try {
-                            parsed = JSON.parse(val)
-                        } catch (err) {
-                            parsed = val;
-                        }
-                    }
-                    this[name] = parsed; // set arbitrary props 
-                    this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
-                    //this.props[name] = val; //set arbitrary props via attributes
-                }
-            }
+    if(typeof this.ondelete === 'function') {
+        let ondelete = this.ondelete;
+        this.ondelete = () => {
+            window.removeEventListener('resize',this.onresize);
+            this.state.unsubscribeTrigger('props');
+            ondelete();
+            this.dispatchEvent(deleted);
+        }
+    }
 
-            connectedCallback() {
+    if(typeof this.onchanged === 'function') {
+        this.state.data.props = this.props;
+        this.state.subscribeTrigger('props',this.onchanged);
+    }
 
-                // set initial props
-                let newProps = this.getAttribute('props');
-                if(typeof newProps === 'string') newProps = JSON.parse(newProps);
+}
 
-                Object.assign(this.props,newProps);
-                this.state.setState({props:this.props});
+constructor() {
+    super();
+}
 
+get props() {
+    return this.props;
+} 
 
-                //Observe arbitrary attributes
-                Array.from(this.attributes).forEach((att) => {
-                    let name = att.name;
-                    //console.log(name,this.getAttribute(name),this[name])
-                    if(!this[name]) { //get/set/observe arbitrary attributes
-                        let parsed = att.value;
-                        if(name.includes('eval_')) { // e.g. <custom-  eval_loginput="(input)=>{console.log(input);}"></custom-> //now elm.loginput(input) should work
-                            name = name.split('_')
-                            name.shift()
-                            name = name.join();
-                            parsed = parseFunctionFromText(att.value);  
-                        }
-                        else if (typeof att.value === 'string') {
-                            try {
-                                parsed = JSON.parse(att.value)
-                            } catch (err) {
-                                parsed = att.value;
-                            }
-                        }
-                        Object.defineProperties(
-                            this, att, {
-                                value:parsed,
-                                writable:true,
-                                get() { return this[name]; },
-                                set(val) { this.setAttribute(name, val); }
-                            }
-                        )
-                        this[name] = parsed;
-                        this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
-                        this.obsAttributes.push(name);
-                    }
-                    
-                    //console.log(this.observedAttributes);
-                })
+set props(newProps={}) {
+    this.setAttribute('props',newProps);
+}
 
-                let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
-                let changed = new CustomEvent('changed', {detail: { props:this.props }});
-                let deleted = new CustomEvent('deleted', {detail: { props:this.props }});
-                let created = new CustomEvent('created', {detail: { props:this.props }});
-                //now we can add event listeners for our custom events
+get template() {
+    return this.template;
+} 
 
-                this.render(this.props);
-                this.dispatchEvent(created);
+set template(template) {
+    this.setAttribute('template',template);
+}
 
-                this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
+get render() {
+    return this.render;
+}
 
-                if(typeof this.onresize === 'function') {
-                    window.addEventListener('resize',()=>{
-                        this.onresize();
-                        this.dispatchEvent(resizeevent);
+get delete() {
+    return this.delete;
+}
+
+get state() {
+    return this.state;
+}
+
+//past tense just so it can't conflict with onchange
+get onchanged() {
+    return this.onchanged;
+} 
+
+set onchanged(onchanged) {
+    this.setAttribute('onchanged',onchanged);
+}
+
+get onresize() {
+    return this.props;
+} 
+
+set onresize(onresize) {
+    this.setAttribute('onresize',onresize);
+}
+
+get ondelete() {
+    return this.props;
+} 
+
+set ondelete(ondelete) {
+    this.setAttribute('ondelete',ondelete);
+}
+
+get oncreate() {
+    return this.oncreate;
+} 
+
+set oncreate(oncreate) {
+    this.setAttribute('oncreated',oncreate);
+}
+
+delete = () => { //deletes self from the DOM
+    this.fragment = undefined;
+    this.remove();
+    if(this.ondelete) this.ondelete(this.props);
+};
+
+render = (props=this.props) => {
+
+    if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
+    else this.templateString = this.template;
+
+    //this.innerHTML = this.templateString;
+
+    const t = document.createElement('template');
+    t.innerHTML = this.templateString;
+    const fragment = t.content;
+    if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
+        if(this.useShadow) {
+            this.shadowRoot.removeChild(this.fragment);
+        }   
+        else this.removeChild(this.fragment); 
+    }
+    this.fragment = fragment;
+    if(this.useShadow) {
+        if(!this.attachedShadow) this.attachShadow({mode:'open'});
+        this.shadowRoot.appendChild(fragment); //now you need to use the shadowRoot.querySelector etc.
+    }   
+    else this.appendChild(fragment);
+    
+    if(this.oncreate) this.oncreate(props); //set scripted behaviors
+}
+
+state = {
+    pushToState:{},
+    data:{},
+    triggers:{},
+    setState(updateObj){
+        Object.assign(this.pushToState,updateObj);
+
+        if(Object.keys(this.triggers).length > 0) {
+            // Object.assign(this.data,this.pushToState);
+            for (const prop of Object.getOwnPropertyNames(this.triggers)) {
+                if(this.pushToState[prop]) {
+                    this.data[prop] = this.pushToState[prop]
+                    delete this.pushToState[prop];
+                    this.triggers[prop].forEach((obj)=>{
+                        obj.onchanged(this.data[prop]);
                     });
                 }
-
-                if(typeof this.ondelete === 'function') {
-                    let ondelete = this.ondelete;
-                    this.ondelete = () => {
-                        window.removeEventListener('resize',this.onresize);
-                        this.state.unsubscribeTrigger('props');
-                        ondelete();
-                        this.dispatchEvent(deleted);
-                    }
-                }
-
-                if(typeof this.onchanged === 'function') {
-                    this.state.data.props = this.props;
-                    this.state.subscribeTrigger('props',this.onchanged);
-                }
-
             }
+        }
 
-            constructor() {
-                super();
+        return this.pushToState;
+    },
+    subscribeTrigger(key,onchanged=(res)=>{}){
+        if(key) {
+            if(!this.triggers[key]) {
+                this.triggers[key] = [];
             }
-
-            get props() {
-                return this.props;
-            } 
-
-            set props(newProps={}) {
-                this.setAttribute('props',newProps);
+            let l = this.triggers[key].length;
+            this.triggers[key].push({idx:l, onchanged:onchanged});
+            return this.triggers[key].length-1;
+        } else return undefined;
+    },
+    unsubscribeTrigger(key,sub){
+        let idx = undefined;
+        let triggers = this.triggers[key]
+        if (triggers){
+            if(!sub) delete this.triggers[key];
+            else {
+                let obj = triggers.find((o)=>{
+                    if(o.idx===sub) {return true;}
+                });
+                if(obj) triggers.splice(idx,1);
+                return true;
             }
+        }
+    },
+    subscribeTriggerOnce(key=undefined,onchanged=(value)=>{}) {
+        let sub;
+        let changed = (value) => {
+            onchanged(value);
+            this.unsubscribeTrigger(key,sub);
+        }
 
-            get template() {
-                return this.template;
-            } 
-
-            set template(template) {
-                this.setAttribute('template',template);
-            }
-
-            get render() {
-                return this.render;
-            }
-
-            get delete() {
-                return this.delete;
-            }
-
-            get state() {
-                return this.state;
-            }
-
-            //past tense just so it can't conflict with onchange
-            get onchanged() {
-                return this.onchanged;
-            } 
-
-            set onchanged(onchanged) {
-                this.setAttribute('onchanged',onchanged);
-            }
-
-            get onresize() {
-                return this.props;
-            } 
-
-            set onresize(onresize) {
-                this.setAttribute('onresize',onresize);
-            }
-
-            get ondelete() {
-                return this.props;
-            } 
-
-            set ondelete(ondelete) {
-                this.setAttribute('ondelete',ondelete);
-            }
-
-            get oncreate() {
-                return this.oncreate;
-            } 
-
-            set oncreate(oncreate) {
-                this.setAttribute('oncreated',oncreate);
-            }
-
-
-            delete = () => { //deletes self from the DOM
-                this.fragment = undefined;
-                this.remove();
-                if(this.ondelete) this.ondelete(this.props);
-            };
-
-            render = (props=this.props) => {
-
-                if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
-                else this.templateString = this.template;
-
-                //this.innerHTML = this.templateString;
-
-                const t = document.createElement('template');
-                t.innerHTML = this.templateString;
-                const fragment = t.content;
-                if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
-                    this.removeChild(this.fragment); 
-                }
-                this.fragment = fragment;
-                this.appendChild(fragment);
-                
-                if(this.oncreate) this.oncreate(props); //set scripted behaviors
-            }
-
-            state = {
-                pushToState:{},
-                data:{},
-                triggers:{},
-                setState(updateObj){
-                    Object.assign(this.pushToState,updateObj);
-
-                    if(Object.keys(this.triggers).length > 0) {
-                        // Object.assign(this.data,this.pushToState);
-                        for (const prop of Object.getOwnPropertyNames(this.triggers)) {
-                            if(this.pushToState[prop]) {
-                                this.data[prop] = this.pushToState[prop]
-                                delete this.pushToState[prop];
-                                this.triggers[prop].forEach((obj)=>{
-                                    obj.onchanged(this.data[prop]);
-                                });
-                            }
-                        }
-                    }
-
-                    return this.pushToState;
-                },
-                subscribeTrigger(key,onchanged=(res)=>{}){
-                    if(key) {
-                        if(!this.triggers[key]) {
-                            this.triggers[key] = [];
-                        }
-                        let l = this.triggers[key].length;
-                        this.triggers[key].push({idx:l, onchanged:onchanged});
-                        return this.triggers[key].length-1;
-                    } else return undefined;
-                },
-                unsubscribeTrigger(key,sub){
-                    let idx = undefined;
-                    let triggers = this.triggers[key]
-                    if (triggers){
-                        if(!sub) delete this.triggers[key];
-                        else {
-                            let obj = triggers.find((o)=>{
-                                if(o.idx===sub) {return true;}
-                            });
-                            if(obj) triggers.splice(idx,1);
-                            return true;
-                        }
-                    }
-                },
-                subscribeTriggerOnce(key=undefined,onchanged=(value)=>{}) {
-                    let sub;
-                    let changed = (value) => {
-                        onchanged(value);
-                        this.unsubscribeTrigger(key,sub);
-                    }
-
-                    sub = this.subscribeTrigger(key,changed);
-                }
-            }
-            }
+        sub = this.subscribeTrigger(key,changed);
+    }
+}
+}
 
 
 
