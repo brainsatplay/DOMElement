@@ -1,16 +1,18 @@
 
 export class DOMElement extends HTMLElement { 
 
-    template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
+    template = (props) => {
+        return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`
+    }; //override the default template string by extending the class, or use options.template if calling the base class
     props = {test:true};
     useShadow = false; //can set to attach a shadow DOM instead (local styles)
-    
+  
     oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
     onresize=undefined //(props) => {} fires on window resize
     ondelete=undefined //(props) => {} fires after element is deleted
     onchanged=undefined //(props) => {} fires when props change
 
-    fragment = undefined;
+    FRAGMENT = undefined;
     attachedShadow = false;
 
     obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
@@ -34,7 +36,7 @@ export class DOMElement extends HTMLElement {
     //add self or a specified class to the window which can be used via html like <custom-tag></custom-tag>
     //will default be the classname with a '-' at the end if no tag supplied
     static addElement(tag=this.tag,cls=this,extend=undefined) {
-        addCustomElement(cls,tag,extend)
+        addCustomElement(cls,tag,extend);
     }
 
     attributeChangedCallback(name, old, val) {
@@ -69,7 +71,7 @@ export class DOMElement extends HTMLElement {
                 this.ondelete = () => {
                     if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                     this.state.unsubscribeTrigger('props');
-                    ondelete(this.props);
+                    if(ondelete) ondelete(this.props);
                 }
             }
         }
@@ -188,6 +190,7 @@ export class DOMElement extends HTMLElement {
         }
 
         if(typeof this.ondelete === 'function') {
+            let ondelete = this.ondelete;
             this.ondelete = (props=this.props) => {
                 if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                 this.state.unsubscribeTrigger('props');
@@ -204,6 +207,96 @@ export class DOMElement extends HTMLElement {
 
     constructor() {
         super();
+    }
+
+    delete = () => { //deletes self from the DOM
+        this.remove();
+        if(typeof this.ondelete === 'function') this.ondelete(this.props);
+    };
+
+    render = (props=this.props) => {
+
+        if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
+        else this.templateString = this.template;
+
+        //this.innerHTML = this.templateString;
+
+        const t = document.createElement('template');
+        t.innerHTML = this.templateString;
+        const fragment = t.content;
+
+        if(this.FRAGMENT) { //will reappend the fragment without reappending the whole node if already rendered once
+            if(this.useShadow) {
+                this.shadowRoot.removeChild(this.FRAGMENT);
+            }   
+            else this.removeChild(this.FRAGMENT); 
+        }
+        if(this.useShadow) {
+            if(!this.attachedShadow) this.attachShadow({mode:'open'});
+            this.shadowRoot.appendChild(fragment); //now you need to use the shadowRoot.querySelector etc.
+            this.FRAGMENT = this.shadowRoot.childNodes[this.shadowRoot.childNodes.length-1]
+        }   
+        else this.appendChild(fragment);
+        this.FRAGMENT = this.childNodes[this.childNodes.length-1]
+        
+        if(this.oncreate) this.oncreate(props); //set scripted behaviors
+    }
+
+    state = {
+        pushToState:{},
+        data:{},
+        triggers:{},
+        setState(updateObj){
+            Object.assign(this.pushToState,updateObj);
+
+            if(Object.keys(this.triggers).length > 0) {
+                // Object.assign(this.data,this.pushToState);
+                for (const prop of Object.getOwnPropertyNames(this.triggers)) {
+                    if(this.pushToState[prop]) {
+                        this.data[prop] = this.pushToState[prop]
+                        delete this.pushToState[prop];
+                        this.triggers[prop].forEach((obj)=>{
+                            obj.onchanged(this.data[prop]);
+                        });
+                    }
+                }
+            }
+
+            return this.pushToState;
+        },
+        subscribeTrigger(key,onchanged=(res)=>{}){
+            if(key) {
+                if(!this.triggers[key]) {
+                    this.triggers[key] = [];
+                }
+                let l = this.triggers[key].length;
+                this.triggers[key].push({idx:l, onchanged:onchanged});
+                return this.triggers[key].length-1;
+            } else return undefined;
+        },
+        unsubscribeTrigger(key,sub){
+            let idx = undefined;
+            let triggers = this.triggers[key]
+            if (triggers){
+                if(!sub) delete this.triggers[key];
+                else {
+                    let obj = triggers.find((o)=>{
+                        if(o.idx===sub) {return true;}
+                    });
+                    if(obj) triggers.splice(idx,1);
+                    return true;
+                }
+            }
+        },
+        subscribeTriggerOnce(key=undefined,onchanged=(value)=>{}) {
+            let sub;
+            let changed = (value) => {
+                onchanged(value);
+                this.unsubscribeTrigger(key,sub);
+            }
+
+            sub = this.subscribeTrigger(key,changed);
+        }
     }
 
     get props() {
@@ -266,106 +359,22 @@ export class DOMElement extends HTMLElement {
     set oncreate(oncreate) {
         this.setAttribute('oncreated',oncreate);
     }
-
-    delete = () => { //deletes self from the DOM
-        this.fragment = undefined;
-        this.remove();
-        if(this.ondelete) this.ondelete(this.props);
-    };
-
-    render = (props=this.props) => {
-
-        if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
-        else this.templateString = this.template;
-
-        //this.innerHTML = this.templateString;
-
-        const t = document.createElement('template');
-        t.innerHTML = this.templateString;
-        const fragment = t.content;
-        if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
-            if(this.useShadow) {
-                this.shadowRoot.removeChild(this.fragment);
-            }   
-            else this.removeChild(this.fragment); 
-        }
-        this.fragment = fragment;
-        if(this.useShadow) {
-            if(!this.attachedShadow) this.attachShadow({mode:'open'});
-            this.shadowRoot.appendChild(fragment); //now you need to use the shadowRoot.querySelector etc.
-        }   
-        else this.appendChild(fragment);
-        
-        if(this.oncreate) this.oncreate(props); //set scripted behaviors
-    }
-
-    state = {
-        pushToState:{},
-        data:{},
-        triggers:{},
-        setState(updateObj){
-            Object.assign(this.pushToState,updateObj);
-
-            if(Object.keys(this.triggers).length > 0) {
-                // Object.assign(this.data,this.pushToState);
-                for (const prop of Object.getOwnPropertyNames(this.triggers)) {
-                    if(this.pushToState[prop]) {
-                        this.data[prop] = this.pushToState[prop]
-                        delete this.pushToState[prop];
-                        this.triggers[prop].forEach((obj)=>{
-                            obj.onchanged(this.data[prop]);
-                        });
-                    }
-                }
-            }
-
-            return this.pushToState;
-        },
-        subscribeTrigger(key,onchanged=(res)=>{}){
-            if(key) {
-                if(!this.triggers[key]) {
-                    this.triggers[key] = [];
-                }
-                let l = this.triggers[key].length;
-                this.triggers[key].push({idx:l, onchanged:onchanged});
-                return this.triggers[key].length-1;
-            } else return undefined;
-        },
-        unsubscribeTrigger(key,sub){
-            let idx = undefined;
-            let triggers = this.triggers[key]
-            if (triggers){
-                if(!sub) delete this.triggers[key];
-                else {
-                    let obj = triggers.find((o)=>{
-                        if(o.idx===sub) {return true;}
-                    });
-                    if(obj) triggers.splice(idx,1);
-                    return true;
-                }
-            }
-        },
-        subscribeTriggerOnce(key=undefined,onchanged=(value)=>{}) {
-            let sub;
-            let changed = (value) => {
-                onchanged(value);
-                this.unsubscribeTrigger(key,sub);
-            }
-
-            sub = this.subscribeTrigger(key,changed);
-        }
-    }
 }
 
 //extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
 export function addCustomElement(cls, tag, extend=null) {
-    if(extend) {
-        if(tag) window.customElements.define(tag, cls, {extends:extend});
-        else window.customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend});
+    try {
+        if(extend) {
+            if(tag) window.customElements.define(tag, cls, {extends:extend});
+            else window.customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend});
+        }
+        else {
+            if(tag) window.customElements.define(tag, cls);
+            else window.customElements.define(cls.name.toLowerCase()+'-',cls);
+        }
     }
-    else {
-        if(tag) window.customElements.define(tag, cls);
-        else window.customElements.define(cls.name.toLowerCase()+'-',cls);
+    catch(err) {
+
     }
 }
 
