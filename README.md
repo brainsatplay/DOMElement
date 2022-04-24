@@ -112,7 +112,9 @@ elm
           
    //internal functions
    
-   .attributeChangedCallback(name, old, val) //when an observed attribute is updated run this function. Arbitrary attributes can be defined in the html tag, if 'eval_' is attached you can even add custom functions that are available on the element. E.g. elm.custom() (e.g. eval_custom='console.log('hello world')'). Any arbitrary attributes can be get/set at any time as well, they will set the same key:value pair on props for conditional rendering purposes in the template.
+   .attributeChangedCallback(name, old, val) //when an observed attribute is updated run this function. Arbitrary attributes can be defined in the html tag, 
+   //if 'eval_' is attached you can even add custom functions that are available on the element. E.g. elm.custom() (e.g. eval_custom='console.log('hello world')').
+   //Any arbitrary attributes can be get/set at any time as well, they will set the same key:value pair on props for conditional rendering purposes in the template.
    
    .connectedCallback() //runs when the element is connected to the DOM. 
           
