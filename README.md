@@ -19,6 +19,7 @@ Extend it like:
 ```js
 class CustomElement extends DOMElement { 
   props={defaultprop:1}:
+  useShadow=false; //shadow DOM root? Allows scoped stylesheets, uses 'open' mode so it's further programmable from script.
 
   //The template can be an imported html file when building in node.js for a better experience
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
