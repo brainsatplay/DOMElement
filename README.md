@@ -90,6 +90,8 @@ All methods in DOMElement:
 
 let elm = new DOMElement()
 
+document.body.appendChild(elm) //add to body
+
 elm
 
    .addElement(tag=this.tag, cls=this, extend=undefined) //static method to add this class to the dom, or some other class, input a tag or by default it uses the class name with a '-' on the end
