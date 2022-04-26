@@ -31,7 +31,8 @@ class CustomElement extends DOMElement {
   
 }
 
-CustomElement.addElement(); //adds the custom class to the window's built-in customElementRegistry before instantiating the new element
+CustomElement.addElement('custom-element'); //adds the custom class to the window's built-in customElementRegistry before instantiating the new element
+//if you don't provide a tag, the element will be registered as the classname plus a dash like 'customelement-'
 ```
  
 where all that needs to be set is the template variable.
@@ -53,6 +54,7 @@ elm.addEventListener('resized',(e) => {
 
 elm.addEventListener('changed',(e) => {
   console.log(e.target.props);
+  //e.g. elm.render() //re-render the element
 });
 
 elm.addEventListener('deleted',(e) => {
@@ -61,7 +63,7 @@ elm.addEventListener('deleted',(e) => {
 
 ```
 
-Custom elements have to have a '-' in the names for whatever reason, they are auto added on the end of the class name if none specified in addCustomElement
+Custom elements have to have a '-' in the names for whatever reason, they are auto added on the end of the class name if none specified in addElement
 
 Even more fun:
 
