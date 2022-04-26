@@ -19,6 +19,7 @@ Extend it like:
 ```js
 class CustomElement extends DOMElement { 
   props={defaultprop:1}:
+  useShadow=false; //shadow DOM root? Allows scoped stylesheets, uses 'open' mode so it's further programmable from script.
 
   //The template can be an imported html file when building in node.js for a better experience
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
@@ -83,56 +84,41 @@ Even more fun:
 </body>
 ```
 
-
-
-#### DOMFragment is an older method as described below, not as clean:
-IOS does not like this method.
-
-`npm i domfragment`
+All methods in DOMElement:
 
 ```js
-import {DOMFragment} from 'domfragment'
 
+let elm = new DOMElement()
 
-const htmlprops = {
-  id:'template1'
-};
+document.body.appendChild(elm) //add to body
 
-function templateStringGen(props) { //write your html in a template string
-    return `
-    <div id=${props.id}>Clickme</div>
-    `;
-}
+elm
 
-function onRender(props) { //setup html
-    document.getElementById(props.id).onclick = () => { 
-      document.getElementById(props.id).innerHTML = "Clicked!"; 
-    }
-}
-
-function onchange(props) { //optional if you want to be able to auto-update the html with changes to the properties, not recommended if you only want to update single divs
-  console.log('props changed!', props);
-}
-
-function ondelete(props) { //called before the node is deleted, use to clean up animation loops and event listeners
-}
-
-function onresize() { //adds a resize listener to the window, this is automatically cleaned up when you delete the node.
-}
-
-const fragment = new DOMFragment(
-                        templateStringGen,
-                        document.body,
-                        htmlprops,
-                        onRender,
-                        undefined, //onchange
-                        "NEVER", //"FRAMERATE" //1000
-                        ondelete,
-                        onresize
-                      ); 
-                      
-//... later ...
-fragment.deleteNode(); //deletes the rendered fragment if you are done with it.
-
+   .addElement(tag=this.tag, cls=this, extend=undefined) //static method to add this class to the dom, or some other class, input a tag or by default it uses the class name with a '-' on the end
+   
+   .render(props=this.props) //render the element with the props
+   
+   .delete() //delete the element and call the ondelete callback
+   
+   .state
+   
+          .setState(updateObj={}) //set state and trigger subscriptions for key:value pairs
+          
+          .subscribeTrigger(key,onchanged=(res)=>{}) //subscribe a function when a key:value pair is updated by setState. returns an int
+          
+          .unsubscribeTrigger(key,sub) //unsubscribe using the int returned by subscribeTrigger
+          
+          .subscribeTriggerOnce(key,onchanged=(res)=>{}) //subscribe a function to run once when a key:value pair is changed by setState({})
+          
+          .data //data object in state
+          
+   //internal functions
+   
+   .attributeChangedCallback(name, old, val) //when an observed attribute is updated run this function. Arbitrary attributes can be defined in the html tag, 
+   //if 'eval_' is attached you can even add custom functions that are available on the element. E.g. elm.custom() (e.g. eval_custom='console.log('hello world')').
+   //Any arbitrary attributes can be get/set at any time as well, they will set the same key:value pair on props for conditional rendering purposes in the template.
+   
+   .connectedCallback() //runs when the element is connected to the DOM. 
+          
 
 ```
