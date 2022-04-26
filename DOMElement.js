@@ -233,10 +233,10 @@ export class DOMElement extends HTMLElement {
         }
         if(this.useShadow) {
             if(!this.attachedShadow) this.attachShadow({mode:'open'});
-            this.shadowRoot.appendChild(fragment); //now you need to use the shadowRoot.querySelector etc.
+            this.shadowRoot.prepend(fragment); //now you need to use the shadowRoot.querySelector etc.
             this.FRAGMENT = this.shadowRoot.childNodes[this.shadowRoot.childNodes.length-1]
         }   
-        else this.appendChild(fragment);
+        else this.prepend(fragment);
         this.FRAGMENT = this.childNodes[this.childNodes.length-1]
         
         if(this.oncreate) this.oncreate(props); //set scripted behaviors
