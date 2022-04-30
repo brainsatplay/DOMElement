@@ -451,11 +451,11 @@ return newFunc;
 </head>
 <body>
     <script>
-        function foo(x=123){ console.log(x) }
+        function foo(x=123){ console.log(x); return 1; }
     </script>
 
 
-    <customelement- props='{"a":"1"}' teststr="abc" testvalue="123" eval_foo="foo(456)" eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp);}"></customelement->
+    <customelement- props='{"a":"1"}' teststr="abc" testvalue="123" eval_foo="foo(456)" eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp); return 2; }"></customelement->
 
     <script>
         let elem = document.getElementsByTagName('customelement-')[0];

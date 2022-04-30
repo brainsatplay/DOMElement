@@ -68,25 +68,26 @@ Custom elements have to have a '-' in the names for whatever reason, they are au
 Even more fun:
 
 ```html
+
 <body>
     <script>
-        function foo(x=123){ console.log(x) }
+        function foo(x=123){ console.log(x); return 1; }
     </script>
 
 
     <customelement- 
-    props='{"a":"1"}' 
-    testvalue="123" 
-    eval_foo="foo(456)" 
-    eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp);}">
+      props='{"a":"1"}' 
+      teststr="abc" 
+      testvalue="123" 
+      eval_foo="foo(456)" 
+      eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp); return 2; }">
     </customelement->
 
     <script>
-      
         let elem = document.getElementsByTagName('customelement-')[0];
-        console.log(Array.from(elem.attributes)); //see dynamically added attributes, the eval_ will be evaluated (can even add or set functions)
-        console.log(elem.boo('but hello world'))
-        console.log(elem.props)
+        console.log(Array.from(elem.attributes));
+        console.log(elem.boo('but hello world'));
+        console.log(elem.props);
         console.log(elem.testvalue);
     </script>
 </body>
