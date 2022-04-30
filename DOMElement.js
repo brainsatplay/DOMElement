@@ -185,7 +185,7 @@ export class DOMElement extends HTMLElement {
             if(this.ONRESIZE) {
                 try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
             }
-            this.ONRESIZE = (ev) => { this.onresize(this.props); } 
+            this.ONRESIZE = (ev) => { this.onresize(this.props); this.dispatchEvent(resizeevent); } 
             window.addEventListener('resize',this.ONRESIZE);       
         }
 
@@ -194,6 +194,7 @@ export class DOMElement extends HTMLElement {
             this.ondelete = (props=this.props) => {
                 if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                 this.state.unsubscribeTrigger('props');
+                this.dispatchEvent(deleted);
                 ondelete(props);
             }
         }
