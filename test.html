@@ -3,58 +3,12 @@
     <!-- <script src=https://cdn.jsdelivr.net/npm/webcomponents-lite@0.6.0/webcomponents-lite.min.js defer></script> -->
     <script>
 
-        function parseFunctionFromText(method) {
-            //Get the text inside of a function (regular or arrow);
-            let getFunctionBody = (methodString) => {
-            return methodString.replace(/^\W*(function[^{]+\{([\s\S]*)\}|[^=]+=>[^{]*\{([\s\S]*)\}|[^=]+=>(.+))/i, '$2$3$4');
-            }
-        
-            let getFunctionHead = (methodString) => {
-            let startindex = methodString.indexOf(')');
-            return methodString.slice(0, methodString.indexOf('{',startindex) + 1);
-            }
-        
-            let newFuncHead = getFunctionHead(method);
-            let newFuncBody = getFunctionBody(method);
-        
-            let newFunc;
-            try {
-                if (newFuncHead.includes('function ')) {
-                    let varName = newFuncHead.split('(')[1].split(')')[0]
-                    newFunc = new Function(varName, newFuncBody);
-                } else {
-                    if(newFuncHead.substring(0,6) === newFuncBody.substring(0,6)) {
-                        //newFuncBody = newFuncBody.substring(newFuncHead.length);
-                        let varName = newFuncHead.split('(')[1].split(')')[0]
-                        //console.log(varName, newFuncHead ,newFuncBody);
-                        newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
-                    }
-                    else {
-                        try {
-                            newFunc = eval(newFuncHead + newFuncBody + "}");
-                        } catch(err) {
-                            newFunc = eval(method); //try just evaluating the method
-                        }
-                    }
-                }
-            }
-            catch(err) {}
-        
-            return newFunc;
-        
-        }
 
-        function addCustomElement(cls, name, extend=undefined) {
+class DOMElement extends HTMLElement { 
 
-            //console.log(cls.name)
-
-            if(name) customElements.define(name.toLowerCase(), cls, {extends:extend});
-            else customElements.define(cls.name.toLowerCase()+'-', cls, {extends:extend}); 
-        }
-
-        class DOMElement extends HTMLElement { 
-
-template = (props) => {return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`}; //override the default template string by extending the class, or use options.template if calling the base class
+template = (props) => {
+    return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`
+}; //override the default template string by extending the class, or use options.template if calling the base class
 props = {test:true};
 useShadow = false; //can set to attach a shadow DOM instead (local styles)
 
@@ -63,7 +17,7 @@ onresize=undefined //(props) => {} fires on window resize
 ondelete=undefined //(props) => {} fires after element is deleted
 onchanged=undefined //(props) => {} fires when props change
 
-fragment = undefined;
+FRAGMENT = undefined;
 attachedShadow = false;
 
 obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
@@ -87,7 +41,7 @@ static get tag(){return this.name.toLowerCase()+'-'} //tagName, default 'classna
 //add self or a specified class to the window which can be used via html like <custom-tag></custom-tag>
 //will default be the classname with a '-' at the end if no tag supplied
 static addElement(tag=this.tag,cls=this,extend=undefined) {
-    addCustomElement(cls,tag,extend)
+    addCustomElement(cls,tag,extend);
 }
 
 attributeChangedCallback(name, old, val) {
@@ -106,10 +60,13 @@ attributeChangedCallback(name, old, val) {
     else if(name === 'onresize') {
         let onresize = val;
         if(typeof onresize === 'string')  onresize = parseFunctionFromText(onresize);
-        if(typeof onresize === 'function') { 
-            try {window.removeEventListener('resize',this.onresize);} catch(err) {}
+        if(typeof onresize === 'function') {
+            if(this.ONRESIZE) {
+                try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
+            }
+            this.ONRESIZE = (ev) => { this.onresize(this.props); } 
             this.onresize = onresize;
-            window.addEventListener('resize',this.onresize);
+            window.addEventListener('resize',this.ONRESIZE);
         }
     }
     else if(name === 'ondelete') {
@@ -117,9 +74,9 @@ attributeChangedCallback(name, old, val) {
         if(typeof ondelete === 'string') ondelete = parseFunctionFromText(ondelete);
         if(typeof ondelete === 'function') { 
             this.ondelete = () => {
-                window.removeEventListener('resize',this.onresize);
+                if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                 this.state.unsubscribeTrigger('props');
-                ondelete();
+                if(ondelete) ondelete(this.props);
             }
         }
     }
@@ -230,19 +187,20 @@ connectedCallback() {
     this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
 
     if(typeof this.onresize === 'function') {
-        window.addEventListener('resize',()=>{
-            this.onresize();
-            this.dispatchEvent(resizeevent);
-        });
+        if(this.ONRESIZE) {
+            try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
+        }
+        this.ONRESIZE = (ev) => { this.onresize(this.props); this.dispatchEvent(resizeevent); } 
+        window.addEventListener('resize',this.ONRESIZE);       
     }
 
     if(typeof this.ondelete === 'function') {
         let ondelete = this.ondelete;
-        this.ondelete = () => {
-            window.removeEventListener('resize',this.onresize);
+        this.ondelete = (props=this.props) => {
+            if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
             this.state.unsubscribeTrigger('props');
-            ondelete();
             this.dispatchEvent(deleted);
+            ondelete(props);
         }
     }
 
@@ -255,6 +213,96 @@ connectedCallback() {
 
 constructor() {
     super();
+}
+
+delete = () => { //deletes self from the DOM
+    this.remove();
+    if(typeof this.ondelete === 'function') this.ondelete(this.props);
+};
+
+render = (props=this.props) => {
+
+    if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
+    else this.templateString = this.template;
+
+    //this.innerHTML = this.templateString;
+
+    const t = document.createElement('template');
+    t.innerHTML = this.templateString;
+    const fragment = t.content;
+
+    if(this.FRAGMENT) { //will reappend the fragment without reappending the whole node if already rendered once
+        if(this.useShadow) {
+            this.shadowRoot.removeChild(this.FRAGMENT);
+        }   
+        else this.removeChild(this.FRAGMENT); 
+    }
+    if(this.useShadow) {
+        if(!this.attachedShadow) this.attachShadow({mode:'open'});
+        this.shadowRoot.prepend(fragment); //now you need to use the shadowRoot.querySelector etc.
+        this.FRAGMENT = this.shadowRoot.childNodes[0];
+    }   
+    else this.prepend(fragment);
+    this.FRAGMENT = this.childNodes[0];
+    
+    if(this.oncreate) this.oncreate(props); //set scripted behaviors
+}
+
+state = {
+    pushToState:{},
+    data:{},
+    triggers:{},
+    setState(updateObj){
+        Object.assign(this.pushToState,updateObj);
+
+        if(Object.keys(this.triggers).length > 0) {
+            // Object.assign(this.data,this.pushToState);
+            for (const prop of Object.getOwnPropertyNames(this.triggers)) {
+                if(this.pushToState[prop]) {
+                    this.data[prop] = this.pushToState[prop]
+                    delete this.pushToState[prop];
+                    this.triggers[prop].forEach((obj)=>{
+                        obj.onchanged(this.data[prop]);
+                    });
+                }
+            }
+        }
+
+        return this.pushToState;
+    },
+    subscribeTrigger(key,onchanged=(res)=>{}){
+        if(key) {
+            if(!this.triggers[key]) {
+                this.triggers[key] = [];
+            }
+            let l = this.triggers[key].length;
+            this.triggers[key].push({idx:l, onchanged:onchanged});
+            return this.triggers[key].length-1;
+        } else return undefined;
+    },
+    unsubscribeTrigger(key,sub){
+        let idx = undefined;
+        let triggers = this.triggers[key]
+        if (triggers){
+            if(!sub) delete this.triggers[key];
+            else {
+                let obj = triggers.find((o)=>{
+                    if(o.idx===sub) {return true;}
+                });
+                if(obj) triggers.splice(idx,1);
+                return true;
+            }
+        }
+    },
+    subscribeTriggerOnce(key=undefined,onchanged=(value)=>{}) {
+        let sub;
+        let changed = (value) => {
+            onchanged(value);
+            this.unsubscribeTrigger(key,sub);
+        }
+
+        sub = this.subscribeTrigger(key,changed);
+    }
 }
 
 get props() {
@@ -317,111 +365,86 @@ get oncreate() {
 set oncreate(oncreate) {
     this.setAttribute('oncreated',oncreate);
 }
-
-delete = () => { //deletes self from the DOM
-    this.fragment = undefined;
-    this.remove();
-    if(this.ondelete) this.ondelete(this.props);
-};
-
-render = (props=this.props) => {
-
-    if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
-    else this.templateString = this.template;
-
-    //this.innerHTML = this.templateString;
-
-    const t = document.createElement('template');
-    t.innerHTML = this.templateString;
-    const fragment = t.content;
-    if(this.fragment) { //will reappend the fragment without reappending the whole node if already rendered once
-        if(this.useShadow) {
-            this.shadowRoot.removeChild(this.fragment);
-        }   
-        else this.removeChild(this.fragment); 
-    }
-    this.fragment = fragment;
-    if(this.useShadow) {
-        if(!this.attachedShadow) this.attachShadow({mode:'open'});
-        this.shadowRoot.appendChild(fragment); //now you need to use the shadowRoot.querySelector etc.
-    }   
-    else this.appendChild(fragment);
-    
-    if(this.oncreate) this.oncreate(props); //set scripted behaviors
 }
 
-state = {
-    pushToState:{},
-    data:{},
-    triggers:{},
-    setState(updateObj){
-        Object.assign(this.pushToState,updateObj);
-
-        if(Object.keys(this.triggers).length > 0) {
-            // Object.assign(this.data,this.pushToState);
-            for (const prop of Object.getOwnPropertyNames(this.triggers)) {
-                if(this.pushToState[prop]) {
-                    this.data[prop] = this.pushToState[prop]
-                    delete this.pushToState[prop];
-                    this.triggers[prop].forEach((obj)=>{
-                        obj.onchanged(this.data[prop]);
-                    });
-                }
-            }
-        }
-
-        return this.pushToState;
-    },
-    subscribeTrigger(key,onchanged=(res)=>{}){
-        if(key) {
-            if(!this.triggers[key]) {
-                this.triggers[key] = [];
-            }
-            let l = this.triggers[key].length;
-            this.triggers[key].push({idx:l, onchanged:onchanged});
-            return this.triggers[key].length-1;
-        } else return undefined;
-    },
-    unsubscribeTrigger(key,sub){
-        let idx = undefined;
-        let triggers = this.triggers[key]
-        if (triggers){
-            if(!sub) delete this.triggers[key];
-            else {
-                let obj = triggers.find((o)=>{
-                    if(o.idx===sub) {return true;}
-                });
-                if(obj) triggers.splice(idx,1);
-                return true;
-            }
-        }
-    },
-    subscribeTriggerOnce(key=undefined,onchanged=(value)=>{}) {
-        let sub;
-        let changed = (value) => {
-            onchanged(value);
-            this.unsubscribeTrigger(key,sub);
-        }
-
-        sub = this.subscribeTrigger(key,changed);
+//extend the DOMElement class with an new name, this name determines the element name (always lower case in the html regardless of class name cases)
+function addCustomElement(cls, tag, extend=null) {
+try {
+    if(extend) {
+        if(tag) window.customElements.define(tag, cls, {extends:extend});
+        else window.customElements.define(cls.name.toLowerCase()+'-',cls, {extends:extend});
+    }
+    else {
+        if(tag) window.customElements.define(tag, cls);
+        else window.customElements.define(cls.name.toLowerCase()+'-',cls);
     }
 }
+catch(err) {
+
+}
+}
+
+function randomId(tag='') {
+return tag+Math.floor(Math.random()*1000000000000000);
+}
+
+// Proper DOM fragment implementation which also creates customElements you can use like <so></so>. High HTML5 performance via template fragments
+function parseFunctionFromText(method) {
+//Get the text inside of a function (regular or arrow);
+let getFunctionBody = (methodString) => {
+return methodString.replace(/^\W*(function[^{]+\{([\s\S]*)\}|[^=]+=>[^{]*\{([\s\S]*)\}|[^=]+=>(.+))/i, '$2$3$4');
+}
+
+let getFunctionHead = (methodString) => {
+let startindex = methodString.indexOf(')');
+return methodString.slice(0, methodString.indexOf('{',startindex) + 1);
+}
+
+let newFuncHead = getFunctionHead(method);
+let newFuncBody = getFunctionBody(method);
+
+let newFunc;
+try{
+    if (newFuncHead.includes('function ')) {
+        let varName = newFuncHead.split('(')[1].split(')')[0]
+        newFunc = new Function(varName, newFuncBody);
+    } else {
+        if(newFuncHead.substring(0,6) === newFuncBody.substring(0,6)) {
+            //newFuncBody = newFuncBody.substring(newFuncHead.length);
+            let varName = newFuncHead.split('(')[1].split(')')[0]
+            //console.log(varName, newFuncHead ,newFuncBody);
+            newFunc = new Function(varName, newFuncBody.substring(newFuncBody.indexOf('{')+1,newFuncBody.length-1));
+        }
+        else {
+            try {
+                newFunc = eval(newFuncHead + newFuncBody + "}");
+            } catch(err) {
+                newFunc = eval(method); //try just evaluating the method
+            }
+        }
+    }
+}
+catch (err) {}
+
+return newFunc;
+
 }
 
 
 
-        addCustomElement(DOMElement,'dom-');
 
-        class CustomElement extends DOMElement { 
-            props={defaultprop:1}
-            template=(props)=>{
-                return `
-                <div>New Element: ${JSON.stringify(props)}</div>
-            `} 
-        }
+    addCustomElement(DOMElement,'dom-');
 
-        //addCustomElement(customelement);
-        CustomElement.addElement()
+    class CustomElement extends DOMElement { 
+        props={defaultprop:1}
+        template=(props)=>{
+            return `
+            <div>New Element: ${props}</div>
+        `} 
+    }
+
+    //addCustomElement(customelement);
+    CustomElement.addElement()
 
     </script>
 </head>
@@ -431,12 +454,13 @@ state = {
     </script>
 
 
-    <customelement- props='{"a":"1"}' teststr="abc" testvalue="123" eval_foo="foo(456)"></customelement->
+    <customelement- props='{"a":"1"}' teststr="abc" testvalue="123" eval_foo="foo(456)" eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp);}"></customelement->
 
     <script>
         let elem = document.getElementsByTagName('customelement-')[0];
         console.log(Array.from(elem.attributes));
-        console.log(elem.props)
+        console.log(elem.boo('but hello world'));
+        console.log(elem.props);
         console.log(elem.testvalue);
     </script>
 </body>

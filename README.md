@@ -74,12 +74,13 @@ Even more fun:
     </script>
 
 
-    <customelement- props='{"a":"1"}' testvalue="123" eval_foo="foo(456)"></customelement->
+    <customelement- props='{"a":"1"}' testvalue="123" eval_foo="foo(456)" eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp);}"></customelement->
 
     <script>
       
         let elem = document.getElementsByTagName('customelement-')[0];
         console.log(Array.from(elem.attributes)); //see dynamically added attributes, the eval_ will be evaluated (can even add or set functions)
+        console.log(elem.boo('but hello world'))
         console.log(elem.props)
         console.log(elem.testvalue);
     </script>
