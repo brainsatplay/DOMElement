@@ -120,7 +120,7 @@ export class DOMElement extends HTMLElement {
                 }
             }
             this[name] = parsed; // set arbitrary props 
-            this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
+            if(name !== 'props') this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
             //this.props[name] = val; //set arbitrary props via attributes
         }
     }
@@ -164,7 +164,7 @@ export class DOMElement extends HTMLElement {
                 )
             }
             this[name] = parsed;
-            this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
+            if(name !== 'props') this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
             this.obsAttributes.push(name);
             
             //console.log(this.observedAttributes);

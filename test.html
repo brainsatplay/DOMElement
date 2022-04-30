@@ -125,7 +125,7 @@ attributeChangedCallback(name, old, val) {
             }
         }
         this[name] = parsed; // set arbitrary props 
-        this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
+        if(name !== 'props') this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
         //this.props[name] = val; //set arbitrary props via attributes
     }
 }
@@ -169,7 +169,7 @@ connectedCallback() {
             )
         }
         this[name] = parsed;
-        this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
+        if(name !== 'props') this.props[name] = parsed; //set on props too (e.g. to more easily modify initial conditions without stringifying an object)
         this.obsAttributes.push(name);
         
         //console.log(this.observedAttributes);
@@ -438,8 +438,9 @@ return newFunc;
     class CustomElement extends DOMElement { 
         props={defaultprop:1}
         template=(props)=>{
+            console.log(props);
             return `
-            <div>New Element: ${props}</div>
+            <div>New Element: ${JSON.stringify(props)}</div>
         `} 
     }
 

@@ -74,7 +74,12 @@ Even more fun:
     </script>
 
 
-    <customelement- props='{"a":"1"}' testvalue="123" eval_foo="foo(456)" eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp);}"></customelement->
+    <customelement- 
+    props='{"a":"1"}' 
+    testvalue="123" 
+    eval_foo="foo(456)" 
+    eval_boo="(inp)=>{console.log('this is probably a dumb feature', inp);}">
+    </customelement->
 
     <script>
       
