@@ -86,11 +86,12 @@ export class DOMElement extends HTMLElement {
         }
         else if(name === 'renderonchanged') {
             let rpc = val;
+            if(typeof this.renderonchanged === 'number') this.unsubscribeTrigger(this.renderonchanged);
             if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
             if(typeof rpc === 'function') {
-                this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
+                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
             }
-            else if(rpc !== false) this.state.subscribeTrigger('props',this.render); //just rerender
+            else if(rpc !== false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender
         }
         else if(name === 'props') { //update the props, fires any onchanged stuff
             let newProps = val;
@@ -235,11 +236,12 @@ export class DOMElement extends HTMLElement {
 
         if(this.renderonchanged) { //set to true or a function or a function string
             let rpc = this.renderonchanged;
+            if(typeof this.renderonchanged === 'number') this.unsubscribeTrigger(this.renderonchanged);
             if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
             if(typeof rpc === 'function') {
-                this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
+                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
             }
-            else this.state.subscribeTrigger('props',this.render); //just rerender
+            else if(rpc !== false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender
         }
 
 
