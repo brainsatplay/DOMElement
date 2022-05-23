@@ -12,7 +12,7 @@ export class DOMElement extends HTMLElement {
     onresize=undefined //(props) => {} fires on window resize
     ondelete=undefined //(props) => {} fires after element is deleted
     onchanged=undefined //(props) => {} fires when props change
-    onrenderchanged=undefined //(props) => {} fires after rerendering on props change
+    renderonchanged=false //(props) => {} fires after rerendering on props change
 
     FRAGMENT = undefined;
     attachedShadow = false;
@@ -90,7 +90,7 @@ export class DOMElement extends HTMLElement {
             if(typeof rpc === 'function') {
                 this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
             }
-            else this.state.subscribeTrigger('props',this.render); //just rerender
+            else if(rpc !== false) this.state.subscribeTrigger('props',this.render); //just rerender
         }
         else if(name === 'props') { //update the props, fires any onchanged stuff
             let newProps = val;
@@ -204,7 +204,7 @@ export class DOMElement extends HTMLElement {
 
             this.useShadow = true;
         }
-        
+
         this.render(this.props);
         this.dispatchEvent(created);
 

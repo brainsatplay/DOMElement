@@ -21,7 +21,7 @@ Extend it like:
 class CustomElement extends DOMElement { 
   props={defaultprop:1}:
   useShadow=false; //shadow DOM root? Allows scoped stylesheets, uses 'open' mode so it's further programmable from script.
-  styles=undefined //you can include a stylesheet template string here to trigger the shadow dom for scoped style sheets automatically
+  styles=undefined //you can include a stylesheet template string here to trigger the shadow dom for scoped style sheets automatically, prepended to the template or inserted into head if its in the template. Triggers an html updated if already rendered.
 
   //The template can be an imported html file when building in node.js for a better experience
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
@@ -30,6 +30,7 @@ class CustomElement extends DOMElement {
   ondelete=undefined, //(props)=>{} when the node is deleted, e.g. cleaning up events (props) => {}
   onresize=undefined, //window.onresize event (props) => {}
   onchanged=undefined, //if props change, e.g. re-render? (props) => {}. Using past tense to not conflict with built in onchange event in most elements
+  renderonchanged=false //(props) => {}  //true or a function fired after rerendering, will auto trigger rerenders when props changed
   
 }
 
@@ -73,7 +74,7 @@ Custom elements have to have a '-' in the names for whatever reason, they are au
 
 ### Styles:
 
-Set the .styles property on the element to a template string of your style sheet contents and it will be prepended with the shadow root. You can set it on attributes on page init or in js and it will work. Otherwise if you want a shadow DOM root to use scoped stylesheets, set `elm.useShadow = true`
+Set the `styles` property on the element to a template string of your style sheet contents and it will be prepended with the shadow root. You can set it on attributes on page init or in js and it will work. Otherwise if you want a shadow DOM root to use scoped stylesheets, set `elm.useShadow = true`.
 
 ### Even more fun:
 
