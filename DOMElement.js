@@ -6,11 +6,13 @@ export class DOMElement extends HTMLElement {
     }; //override the default template string by extending the class, or use options.template if calling the base class
     props = {test:true};
     useShadow = false; //can set to attach a shadow DOM instead (local styles)
+    styles = undefined; //can set a style sheet which will toggle the shadow dom by default
   
     oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
     onresize=undefined //(props) => {} fires on window resize
     ondelete=undefined //(props) => {} fires after element is deleted
     onchanged=undefined //(props) => {} fires when props change
+    onrenderchanged=undefined //(props) => {} fires after rerendering on props change
 
     FRAGMENT = undefined;
     attachedShadow = false;
@@ -81,6 +83,14 @@ export class DOMElement extends HTMLElement {
             if(typeof oncreate === 'function') { 
                 this.oncreate = oncreate;
             }
+        }
+        else if(name === 'renderonchanged') {
+            let rpc = val;
+            if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
+            if(typeof rpc === 'function') {
+                this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
+            }
+            else this.state.subscribeTrigger('props',this.render); //just rerender
         }
         else if(name === 'props') { //update the props, fires any onchanged stuff
             let newProps = val;
@@ -176,6 +186,25 @@ export class DOMElement extends HTMLElement {
         let created = new CustomEvent('created', {detail: { props:this.props }});
         //now we can add event listeners for our custom events
 
+        
+        if(this.styles) {
+            let elm = `
+            <style>
+                ${templateStr}
+            </style>
+            `;
+
+            if(this.template.indexOf('<style')) {
+                this.template.splice(this.template.indexOf('<style'+7),this.template.indexOf('</style'),templateStr);
+            } else {
+                if(this.template.indexOf('<head')) {
+                    this.template.splice(this.template.indexOf('<head'+6),0,elm);
+                } else this.template = elm + this.template;
+            }
+
+            this.useShadow = true;
+        }
+        
         this.render(this.props);
         this.dispatchEvent(created);
 
@@ -203,6 +232,16 @@ export class DOMElement extends HTMLElement {
             this.state.data.props = this.props;
             this.state.subscribeTrigger('props',this.onchanged);
         }
+
+        if(this.renderonchanged) { //set to true or a function or a function string
+            let rpc = this.renderonchanged;
+            if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
+            if(typeof rpc === 'function') {
+                this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
+            }
+            else this.state.subscribeTrigger('props',this.render); //just rerender
+        }
+
 
     }
 
@@ -239,6 +278,9 @@ export class DOMElement extends HTMLElement {
         }   
         else this.prepend(fragment);
         this.FRAGMENT = this.childNodes[0];
+
+        let rendered = new CustomEvent('rendered', {detail: { props:this.props }});
+        this.dispatchEvent('rendered');
         
         if(this.oncreate) this.oncreate(props); //set scripted behaviors
     }
@@ -337,6 +379,45 @@ export class DOMElement extends HTMLElement {
         this.setAttribute('onchanged',onchanged);
     }
 
+    get styles() {
+        return this.styles
+    }
+
+    set styles(templateStr) {
+        let elm = `
+        <style>
+            ${templateStr}
+        </style>
+        `;
+
+        if(this.template.indexOf('<style')) {
+            this.template.splice(this.template.indexOf('<style'+7),this.template.indexOf('</style'),templateStr);
+        } else {
+            if(this.template.indexOf('<head')) {
+                this.template.splice(this.template.indexOf('<head'+6),0,elm);
+            } else this.template = elm + this.template;
+        }
+
+        if(this.querySelector('style')) { //get the top style 
+            if(!this.useShadow) {
+                this.useShadow = true;
+                this.render()
+            } else this.querySelector('style').innerHTML = templateStr;
+
+        } else {
+            this.useShadow = true;
+            this.render();
+        }
+    }
+
+    get renderonchanged() {
+        return this.renderonchanged;
+    }
+
+    set renderonchanged(onchanged) {
+        this.setAttribute('renderonchanged',onchanged);
+    }
+ 
     get onresize() {
         return this.props;
     } 

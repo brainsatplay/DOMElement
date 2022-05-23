@@ -12,7 +12,8 @@
 
 This is a simple wrapper for the native web components with template fragments in javascript.
 
-DOMElement extends the HTMLElement class and implements a template fragment rendering method:
+### DOMElement 
+This class extends the HTMLElement class and implements a template fragment rendering method:
 
 
 Extend it like:
@@ -20,6 +21,7 @@ Extend it like:
 class CustomElement extends DOMElement { 
   props={defaultprop:1}:
   useShadow=false; //shadow DOM root? Allows scoped stylesheets, uses 'open' mode so it's further programmable from script.
+  styles=undefined //you can include a stylesheet template string here to trigger the shadow dom for scoped style sheets automatically
 
   //The template can be an imported html file when building in node.js for a better experience
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
@@ -42,8 +44,7 @@ Then this *should* work in html:
 ```html
 <customelement- props='{"a":"1","b":"2","c":"3"}'><customelement- /> 
 ```
-Can define props, onresize, onchanged, oncreate, ondelete, and even template just like other stock html functions.
-
+Can define props, onresize, onchanged, oncreate, ondelete, and even template just like other stock html functions. The prop onrenderchange if included will trigger the render function, and you can supply a function to fire after the fact.
 
 ```js
 let elm = document.querySelector('customelement-');
@@ -61,11 +62,20 @@ elm.addEventListener('deleted',(e) => {
   console.log(e.target.props);
 });
 
+elm.addEventListener('rendered',(e) => {
+  console.log(e.target.props);
+});
+
 ```
 
 Custom elements have to have a '-' in the names for whatever reason, they are auto added on the end of the class name if none specified in addElement
 
-Even more fun:
+
+### Styles:
+
+Set the .styles property on the element to a template string of your style sheet contents and it will be prepended with the shadow root. You can set it on attributes on page init or in js and it will work. Otherwise if you want a shadow DOM root to use scoped stylesheets, set `elm.useShadow = true`
+
+### Even more fun:
 
 ```html
 
@@ -93,7 +103,7 @@ Even more fun:
 </body>
 ```
 
-All methods in DOMElement:
+### All methods in DOMElement:
 
 ```js
 
