@@ -32,8 +32,8 @@ export class DOMElement extends HTMLElement {
         data: {};
         triggers: {};
         setState(updateObj: any): {};
-        subscribeTrigger(key: any, onchanged?: (res: any) => void): number | undefined;
-        unsubscribeTrigger(key: any, sub: any): true | undefined;
-        subscribeTriggerOnce(key?: undefined, onchanged?: (value: any) => void): void;
+        subscribeTrigger(key: string, onchanged?: (res: any) => void): number | undefined;
+        unsubscribeTrigger(key: string, sub: any): true | undefined;
+        subscribeTriggerOnce(key: string, onchanged?: (value: any) => void): void;
     };
 }
