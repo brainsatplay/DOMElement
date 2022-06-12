@@ -4,7 +4,7 @@ export function parseFunctionFromText(method: any): any;
 export class DOMElement extends HTMLElement {
     static get tag(): string;
     static addElement(tag?: string, cls?: typeof DOMElement, extend?: any): void;
-    template: (props: any) => string;
+    template: string|((props: any) => string);
     props: {
         [key:string]:any
     };
