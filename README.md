@@ -26,11 +26,11 @@ class CustomElement extends DOMElement {
   //The template can be an imported html file when building in node.js for a better experience
   template=(props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
          
-  oncreate=undefined, //(props)=>{} when the node is created e.g. setting up buttons (props) => {}
-  ondelete=undefined, //(props)=>{} when the node is deleted, e.g. cleaning up events (props) => {}
-  onresize=undefined, //window.onresize event (props) => {}
-  onchanged=undefined, //if props change, e.g. re-render? (props) => {}. Using past tense to not conflict with built in onchange event in most elements
-  renderonchanged=false //(props) => {}  //true or a function fired after rerendering, will auto trigger rerenders when props changed
+  oncreate=undefined, //(props,self)=>{} when the node is created e.g. setting up buttons (props) => {}
+  ondelete=undefined, //(props,self)=>{} when the node is deleted, e.g. cleaning up events (props) => {}
+  onresize=undefined, //(props,self) => {} run on window.onresize event 
+  onchanged=undefined, //if props change, e.g. re-render? (props,self) => {}. Using past tense to not conflict with built in onchange event in most elements
+  renderonchanged=false //(props,self) => {}  //true or a function fired after rerendering, will auto trigger rerenders when props changed
   
 }
 

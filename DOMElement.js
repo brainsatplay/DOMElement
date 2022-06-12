@@ -8,11 +8,11 @@ export class DOMElement extends HTMLElement {
     useShadow = false; //can set to attach a shadow DOM instead (local styles)
     styles = undefined; //can set a style sheet which will toggle the shadow dom by default
   
-    oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
-    onresize=undefined //(props) => {} fires on window resize
-    ondelete=undefined //(props) => {} fires after element is deleted
-    onchanged=undefined //(props) => {} fires when props change
-    renderonchanged=false //(props) => {} fires after rerendering on props change
+    oncreate=undefined //(props,self) => {}  fires on element creation (e.g. to set up logic)
+    onresize=undefined //(props,self) => {} fires on window resize
+    ondelete=undefined //(props,self) => {} fires after element is deleted
+    onchanged=undefined //(props,self) => {} fires when props change
+    renderonchanged=false //(props,self) => {} fires after rerendering on props change
 
     FRAGMENT = undefined;
     attachedShadow = false;
@@ -50,7 +50,7 @@ export class DOMElement extends HTMLElement {
                 this.state.data.props = this.props;
                 this.state.unsubscribeTrigger('props'); //remove any previous subs
                 this.state.subscribeTrigger('props',this.onchanged);
-                let changed = new CustomEvent('changed', {detail: { props:this.props }});
+                let changed = new CustomEvent('changed', {detail: { props:this.props, self:this }});
                 this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
             }
         }
@@ -61,7 +61,7 @@ export class DOMElement extends HTMLElement {
                 if(this.ONRESIZE) {
                     try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
                 }
-                this.ONRESIZE = (ev) => { this.onresize(this.props); } 
+                this.ONRESIZE = (ev) => { this.onresize(this.props,this); } 
                 this.onresize = onresize;
                 window.addEventListener('resize',this.ONRESIZE);
             }
@@ -73,7 +73,7 @@ export class DOMElement extends HTMLElement {
                 this.ondelete = () => {
                     if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                     this.state.unsubscribeTrigger('props');
-                    if(ondelete) ondelete(this.props);
+                    if(ondelete) ondelete(this.props,this);
                 }
             }
         }
@@ -89,9 +89,9 @@ export class DOMElement extends HTMLElement {
             if(typeof this.renderonchanged === 'number') this.unsubscribeTrigger(this.renderonchanged);
             if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
             if(typeof rpc === 'function') {
-                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
+                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p,this);}); //rerender then call the onchanged function if provided
             }
-            else if(rpc !== false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender
+            else if(rpc != false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender automatically if set to true instead of a function
         }
         else if(name === 'props') { //update the props, fires any onchanged stuff
             let newProps = val;
@@ -181,10 +181,10 @@ export class DOMElement extends HTMLElement {
             //console.log(this.observedAttributes);
         });
 
-        let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
-        let changed = new CustomEvent('changed', {detail: { props:this.props }});
-        let deleted = new CustomEvent('deleted', {detail: { props:this.props }});
-        let created = new CustomEvent('created', {detail: { props:this.props }});
+        let resizeevent = new CustomEvent('resized', {detail: { props:this.props, self:this }});
+        let changed = new CustomEvent('changed', {detail: { props:this.props, self:this }});
+        let deleted = new CustomEvent('deleted', {detail: { props:this.props, self:this }});
+        let created = new CustomEvent('created', {detail: { props:this.props, self:this }});
         //now we can add event listeners for our custom events
 
         
@@ -215,7 +215,7 @@ export class DOMElement extends HTMLElement {
             if(this.ONRESIZE) {
                 try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
             }
-            this.ONRESIZE = (ev) => { this.onresize(this.props); this.dispatchEvent(resizeevent); } 
+            this.ONRESIZE = (ev) => { this.onresize(this.props,this); this.dispatchEvent(resizeevent); } 
             window.addEventListener('resize',this.ONRESIZE);       
         }
 
@@ -225,7 +225,7 @@ export class DOMElement extends HTMLElement {
                 if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                 this.state.unsubscribeTrigger('props');
                 this.dispatchEvent(deleted);
-                ondelete(props);
+                ondelete(props,this);
             }
         }
 
@@ -281,10 +281,10 @@ export class DOMElement extends HTMLElement {
         else this.prepend(fragment);
         this.FRAGMENT = this.childNodes[0];
 
-        let rendered = new CustomEvent('rendered', {detail: { props:this.props }});
+        let rendered = new CustomEvent('rendered', {detail: { props:this.props, self:this }});
         this.dispatchEvent('rendered');
         
-        if(this.oncreate) this.oncreate(props); //set scripted behaviors
+        if(this.oncreate) this.oncreate(props,this); //set scripted behaviors
     }
 
     state = {

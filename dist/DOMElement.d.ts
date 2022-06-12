@@ -10,11 +10,11 @@ export class DOMElement extends HTMLElement {
     };
     useShadow: boolean;
     styles: string;
-    oncreate: any;
-    onresize: any;
-    ondelete: any;
-    onchanged: any;
-    renderonchanged: boolean;
+    oncreate: (props:any,self:any)=>void;
+    onresize:  ((props:any,self:any)=>void)|any;
+    ondelete:  (props:any,self:any)=>void;
+    onchanged:  (props:any,self:any)=>void;
+    renderonchanged: boolean|((props:any,self:any)=>void);
     FRAGMENT: any;
     attachedShadow: boolean;
     obsAttributes: string[];
