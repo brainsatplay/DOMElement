@@ -6,7 +6,7 @@ export class DOMElement extends HTMLElement {
     static addElement(tag?: string, cls?: typeof DOMElement, extend?: any): void;
     template: (props: any) => string;
     props: {
-        test: boolean;
+        [key:string]:any
     };
     useShadow: boolean;
     styles: string;
