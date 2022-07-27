@@ -3,7 +3,6 @@
     <!-- <script src=https://cdn.jsdelivr.net/npm/webcomponents-lite@0.6.0/webcomponents-lite.min.js defer></script> -->
     <script>
 
-
 //from 'fragelement' on npm by Joshua Brewster (AGPL v3.0)
 class DOMElement extends HTMLElement { 
 
@@ -20,7 +19,7 @@ ondelete; //(self,props) => {} fires after element is deleted
 onchanged; //(props) => {} fires when props change
 renderonchanged=false; //(self,props) => {} fires after rerendering on props change
 
-FRAGMENT; STYLE; SHADOW;
+FRAGMENT; STYLE;
 attachedShadow = false;
 
 obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
@@ -195,9 +194,9 @@ connectedCallback() {
     //now we can add event listeners for our custom events
 
     
-    if(this.styles) {
-        this.useShadow = true;
-    }
+    // if(this.styles) {
+    //     this.useShadow = true;
+    // }
 
     this.render(this.props);
     this.dispatchEvent(created);
@@ -254,7 +253,7 @@ render = (props=this.props) => {
     if(typeof this.template === 'function') this.templateResult = this.template(props, this); //can pass a function
     else this.templateResult = this.template;
 
-
+    if(this.styles) this.templateResult = `<style>${this.styles}</style>${this.templateResult}`;
     //this.innerHTML = this.templateResult;
 
     const t = document.createElement('template');
@@ -408,13 +407,14 @@ set styles(templateStr) {
     this.styles = templateStr;
 
     if(this.querySelector('style')) { //get the top style 
-        if(!this.useShadow) {
-            this.useShadow = true;
-            this.render()
-        } else this.querySelector('style').innerHTML = templateStr;
+        // if(!this.useShadow) {
+        //     this.useShadow = true;
+        //     this.render()
+        // } else 
+        this.querySelector('style').innerHTML = templateStr;
 
     } else {
-        this.useShadow = true;
+        //this.useShadow = true;
         this.render();
     }
 }
@@ -514,6 +514,7 @@ catch (err) {}
 return newFunc;
 
 }
+
 
 
     </script>
