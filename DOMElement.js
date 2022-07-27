@@ -1,20 +1,20 @@
-
+//from 'fragelement' on npm by Joshua Brewster (AGPL v3.0)
 export class DOMElement extends HTMLElement { 
 
-    template = (props) => {
+    template = (props, self=this) => { //return a string or html node
         return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`
     }; //override the default template string by extending the class, or use options.template if calling the base class
-    props = {test:true};
+    props = {};
     useShadow = false; //can set to attach a shadow DOM instead (local styles)
-    styles = undefined; //can set a style sheet which will toggle the shadow dom by default
+    styles; //can set a style sheet which will toggle the shadow dom by default
   
-    oncreate=undefined //(props,self) => {}  fires on element creation (e.g. to set up logic)
-    onresize=undefined //(props,self) => {} fires on window resize
-    ondelete=undefined //(props,self) => {} fires after element is deleted
-    onchanged=undefined //(props,self) => {} fires when props change
-    renderonchanged=false //(props,self) => {} fires after rerendering on props change
+    oncreate; //(self,props) => {}  fires on element creation (e.g. to set up logic)
+    onresize; //(self,props) => {} fires on window resize
+    ondelete; //(self,props) => {} fires after element is deleted
+    onchanged; //(props) => {} fires when props change
+    renderonchanged=false; //(self,props) => {} fires after rerendering on props change
 
-    FRAGMENT = undefined;
+    FRAGMENT;
     attachedShadow = false;
 
     obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
@@ -41,7 +41,7 @@ export class DOMElement extends HTMLElement {
         addCustomElement(cls,tag,extend);
     }
 
-    attributeChangedCallback(name, old, val) {
+    attributeChangedCallback = (name, old, val) => {
         if(name === 'onchanged') {
             let onchanged = val;
             if(typeof onchanged === 'string') onchanged = parseFunctionFromText(onchanged);
@@ -89,7 +89,7 @@ export class DOMElement extends HTMLElement {
             if(typeof this.renderonchanged === 'number') this.unsubscribeTrigger(this.renderonchanged);
             if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
             if(typeof rpc === 'function') {
-                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p,this);}); //rerender then call the onchanged function if provided
+                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(this,p);}); //rerender then call the onchanged function if provided
             }
             else if(rpc != false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender automatically if set to true instead of a function
         }
@@ -104,10 +104,7 @@ export class DOMElement extends HTMLElement {
 
             let template = val;
 
-            this.template = options.template; //function or string;
-
-            if(typeof template === 'function') this.templateString = this.template(this.props); //can pass a function
-            else this.templateString = template;
+            this.template = template; //function or string;
             
             //render the new template
             this.render(this.props);
@@ -131,7 +128,7 @@ export class DOMElement extends HTMLElement {
                 }
             }
             this[name] = parsed; // set arbitrary props 
-            if(name !== 'props') this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
+            if(name !== 'props' && this.props) this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
             //this.props[name] = val; //set arbitrary props via attributes
         }
     }
@@ -139,13 +136,17 @@ export class DOMElement extends HTMLElement {
     connectedCallback() {
 
         // set initial props
+        if(!this.props) this.props = {};
+        //debugger;
         let newProps = this.getAttribute('props');
         if(typeof newProps === 'string') newProps = JSON.parse(newProps);
 
         Object.assign(this.props,newProps);
+
         this.state.setState({props:this.props});
 
         //Observe arbitrary attributes
+            //console.log(this,this.attributes)
         Array.from(this.attributes).forEach((att) => {
             let name = att.name;
             //console.log(name,this.getAttribute(name),this[name])
@@ -215,7 +216,7 @@ export class DOMElement extends HTMLElement {
             if(this.ONRESIZE) {
                 try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
             }
-            this.ONRESIZE = (ev) => { this.onresize(this.props,this); this.dispatchEvent(resizeevent); } 
+            this.ONRESIZE = (ev) => { this.onresize(this,this.props); this.dispatchEvent(resizeevent); } 
             window.addEventListener('resize',this.ONRESIZE);       
         }
 
@@ -225,7 +226,7 @@ export class DOMElement extends HTMLElement {
                 if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                 this.state.unsubscribeTrigger('props');
                 this.dispatchEvent(deleted);
-                ondelete(props,this);
+                ondelete(this,props);
             }
         }
 
@@ -239,7 +240,7 @@ export class DOMElement extends HTMLElement {
             if(typeof this.renderonchanged === 'number') this.unsubscribeTrigger(this.renderonchanged);
             if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
             if(typeof rpc === 'function') {
-                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(p);}); //rerender then call the onchanged function if provided
+                this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(this,p);}); //rerender then call the onchanged function if provided
             }
             else if(rpc !== false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender
         }
@@ -258,13 +259,21 @@ export class DOMElement extends HTMLElement {
 
     render = (props=this.props) => {
 
-        if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
-        else this.templateString = this.template;
+        if(typeof this.template === 'function') this.templateResult = this.template(props, this); //can pass a function
+        else this.templateResult = this.template;
 
-        //this.innerHTML = this.templateString;
+        //this.innerHTML = this.templateResult;
 
         const t = document.createElement('template');
-        t.innerHTML = this.templateString;
+
+        if(typeof this.templateResult === 'string') t.innerHTML = this.templateResult;
+        else if(this.templateResult instanceof HTMLElement) {
+            if(this.templateResult.parentNode) {
+                this.templateResult.parentNode.removeChild(this.templateResult); //swap to the new component
+            }
+            t.appendChild(this.templateResult);
+        }
+
         const fragment = t.content;
 
         if(this.FRAGMENT) { //will reappend the fragment without reappending the whole node if already rendered once
@@ -282,9 +291,9 @@ export class DOMElement extends HTMLElement {
         this.FRAGMENT = this.childNodes[0];
 
         let rendered = new CustomEvent('rendered', {detail: { props:this.props, self:this }});
-        this.dispatchEvent('rendered');
+        this.dispatchEvent(rendered);
         
-        if(this.oncreate) this.oncreate(props,this); //set scripted behaviors
+        if(this.oncreate) this.oncreate(this,props); //set scripted behaviors
     }
 
     state = {
@@ -495,9 +504,9 @@ export function parseFunctionFromText(method) {
             }
             else {
                 try {
-                    newFunc = eval(newFuncHead + newFuncBody + "}");
+                    newFunc = (0,eval)(newFuncHead + newFuncBody + "}");
                 } catch(err) {
-                    newFunc = eval(method); //try just evaluating the method
+                    newFunc = (0,eval)(method); //try just evaluating the method
                 }
             }
         }

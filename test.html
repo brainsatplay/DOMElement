@@ -4,20 +4,23 @@
     <script>
 
 
+//from 'fragelement' on npm by Joshua Brewster (AGPL v3.0)
 class DOMElement extends HTMLElement { 
 
-template = (props) => {
+template = (props, self=this) => { //return a string or html node
     return `<div> Custom Fragment Props: ${JSON.stringify(props)} </div>`
 }; //override the default template string by extending the class, or use options.template if calling the base class
-props = {test:true};
+props = {};
 useShadow = false; //can set to attach a shadow DOM instead (local styles)
+styles; //can set a style sheet which will toggle the shadow dom by default
 
-oncreate=undefined //(props) => {}  fires on element creation (e.g. to set up logic)
-onresize=undefined //(props) => {} fires on window resize
-ondelete=undefined //(props) => {} fires after element is deleted
-onchanged=undefined //(props) => {} fires when props change
+oncreate; //(self,props) => {}  fires on element creation (e.g. to set up logic)
+onresize; //(self,props) => {} fires on window resize
+ondelete; //(self,props) => {} fires after element is deleted
+onchanged; //(props) => {} fires when props change
+renderonchanged=false; //(self,props) => {} fires after rerendering on props change
 
-FRAGMENT = undefined;
+FRAGMENT;
 attachedShadow = false;
 
 obsAttributes=["props","options","onchanged","onresize","ondelete","oncreate","template"]
@@ -44,7 +47,7 @@ static addElement(tag=this.tag,cls=this,extend=undefined) {
     addCustomElement(cls,tag,extend);
 }
 
-attributeChangedCallback(name, old, val) {
+attributeChangedCallback = (name, old, val) => {
     if(name === 'onchanged') {
         let onchanged = val;
         if(typeof onchanged === 'string') onchanged = parseFunctionFromText(onchanged);
@@ -53,7 +56,7 @@ attributeChangedCallback(name, old, val) {
             this.state.data.props = this.props;
             this.state.unsubscribeTrigger('props'); //remove any previous subs
             this.state.subscribeTrigger('props',this.onchanged);
-            let changed = new CustomEvent('changed', {detail: { props:this.props }});
+            let changed = new CustomEvent('changed', {detail: { props:this.props, self:this }});
             this.state.subscribeTrigger('props',()=>{this.dispatchEvent(changed)});
         }
     }
@@ -64,7 +67,7 @@ attributeChangedCallback(name, old, val) {
             if(this.ONRESIZE) {
                 try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
             }
-            this.ONRESIZE = (ev) => { this.onresize(this.props); } 
+            this.ONRESIZE = (ev) => { this.onresize(this.props,this); } 
             this.onresize = onresize;
             window.addEventListener('resize',this.ONRESIZE);
         }
@@ -76,7 +79,7 @@ attributeChangedCallback(name, old, val) {
             this.ondelete = () => {
                 if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
                 this.state.unsubscribeTrigger('props');
-                if(ondelete) ondelete(this.props);
+                if(ondelete) ondelete(this.props,this);
             }
         }
     }
@@ -86,6 +89,15 @@ attributeChangedCallback(name, old, val) {
         if(typeof oncreate === 'function') { 
             this.oncreate = oncreate;
         }
+    }
+    else if(name === 'renderonchanged') {
+        let rpc = val;
+        if(typeof this.renderonchanged === 'number') this.unsubscribeTrigger(this.renderonchanged);
+        if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
+        if(typeof rpc === 'function') {
+            this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(this,p);}); //rerender then call the onchanged function if provided
+        }
+        else if(rpc != false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender automatically if set to true instead of a function
     }
     else if(name === 'props') { //update the props, fires any onchanged stuff
         let newProps = val;
@@ -98,10 +110,7 @@ attributeChangedCallback(name, old, val) {
 
         let template = val;
 
-        this.template = options.template; //function or string;
-
-        if(typeof template === 'function') this.templateString = this.template(this.props); //can pass a function
-        else this.templateString = template;
+        this.template = template; //function or string;
         
         //render the new template
         this.render(this.props);
@@ -125,7 +134,7 @@ attributeChangedCallback(name, old, val) {
             }
         }
         this[name] = parsed; // set arbitrary props 
-        if(name !== 'props') this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
+        if(name !== 'props' && this.props) this.props[name] = parsed; //reflect it in the props object (to set props via attributes more easily)
         //this.props[name] = val; //set arbitrary props via attributes
     }
 }
@@ -133,13 +142,17 @@ attributeChangedCallback(name, old, val) {
 connectedCallback() {
 
     // set initial props
+    if(!this.props) this.props = {};
+    //debugger;
     let newProps = this.getAttribute('props');
     if(typeof newProps === 'string') newProps = JSON.parse(newProps);
 
     Object.assign(this.props,newProps);
+
     this.state.setState({props:this.props});
 
     //Observe arbitrary attributes
+        //console.log(this,this.attributes)
     Array.from(this.attributes).forEach((att) => {
         let name = att.name;
         //console.log(name,this.getAttribute(name),this[name])
@@ -175,11 +188,30 @@ connectedCallback() {
         //console.log(this.observedAttributes);
     });
 
-    let resizeevent = new CustomEvent('resized', {detail: { props:this.props }});
-    let changed = new CustomEvent('changed', {detail: { props:this.props }});
-    let deleted = new CustomEvent('deleted', {detail: { props:this.props }});
-    let created = new CustomEvent('created', {detail: { props:this.props }});
+    let resizeevent = new CustomEvent('resized', {detail: { props:this.props, self:this }});
+    let changed = new CustomEvent('changed', {detail: { props:this.props, self:this }});
+    let deleted = new CustomEvent('deleted', {detail: { props:this.props, self:this }});
+    let created = new CustomEvent('created', {detail: { props:this.props, self:this }});
     //now we can add event listeners for our custom events
+
+    
+    if(this.styles) {
+        let elm = `
+        <style>
+            ${templateStr}
+        </style>
+        `;
+
+        if(this.template.indexOf('<style')) {
+            this.template.splice(this.template.indexOf('<style'+7),this.template.indexOf('</style'),templateStr);
+        } else {
+            if(this.template.indexOf('<head')) {
+                this.template.splice(this.template.indexOf('<head'+6),0,elm);
+            } else this.template = elm + this.template;
+        }
+
+        this.useShadow = true;
+    }
 
     this.render(this.props);
     this.dispatchEvent(created);
@@ -190,7 +222,7 @@ connectedCallback() {
         if(this.ONRESIZE) {
             try { window.removeEventListener('resize',this.ONRESIZE); } catch(err) {}
         }
-        this.ONRESIZE = (ev) => { this.onresize(this.props); this.dispatchEvent(resizeevent); } 
+        this.ONRESIZE = (ev) => { this.onresize(this,this.props); this.dispatchEvent(resizeevent); } 
         window.addEventListener('resize',this.ONRESIZE);       
     }
 
@@ -200,7 +232,7 @@ connectedCallback() {
             if(this.ONRESIZE) window.removeEventListener('resize',this.ONRESIZE);
             this.state.unsubscribeTrigger('props');
             this.dispatchEvent(deleted);
-            ondelete(props);
+            ondelete(this,props);
         }
     }
 
@@ -208,6 +240,17 @@ connectedCallback() {
         this.state.data.props = this.props;
         this.state.subscribeTrigger('props',this.onchanged);
     }
+
+    if(this.renderonchanged) { //set to true or a function or a function string
+        let rpc = this.renderonchanged;
+        if(typeof this.renderonchanged === 'number') this.unsubscribeTrigger(this.renderonchanged);
+        if(typeof rpc === 'string') rpc = parseFunctionFromText(rpc);
+        if(typeof rpc === 'function') {
+            this.renderonchanged = this.state.subscribeTrigger('props', (p)=>{this.render(p); rpc(this,p);}); //rerender then call the onchanged function if provided
+        }
+        else if(rpc !== false) this.renderonchanged = this.state.subscribeTrigger('props',this.render); //just rerender
+    }
+
 
 }
 
@@ -222,13 +265,21 @@ delete = () => { //deletes self from the DOM
 
 render = (props=this.props) => {
 
-    if(typeof this.template === 'function') this.templateString = this.template(props); //can pass a function
-    else this.templateString = this.template;
+    if(typeof this.template === 'function') this.templateResult = this.template(props, this); //can pass a function
+    else this.templateResult = this.template;
 
-    //this.innerHTML = this.templateString;
+    //this.innerHTML = this.templateResult;
 
     const t = document.createElement('template');
-    t.innerHTML = this.templateString;
+
+    if(typeof this.templateResult === 'string') t.innerHTML = this.templateResult;
+    else if(this.templateResult instanceof HTMLElement) {
+        if(this.templateResult.parentNode) {
+            this.templateResult.parentNode.removeChild(this.templateResult); //swap to the new component
+        }
+        t.appendChild(this.templateResult);
+    }
+
     const fragment = t.content;
 
     if(this.FRAGMENT) { //will reappend the fragment without reappending the whole node if already rendered once
@@ -244,8 +295,11 @@ render = (props=this.props) => {
     }   
     else this.prepend(fragment);
     this.FRAGMENT = this.childNodes[0];
+
+    let rendered = new CustomEvent('rendered', {detail: { props:this.props, self:this }});
+    this.dispatchEvent(rendered);
     
-    if(this.oncreate) this.oncreate(props); //set scripted behaviors
+    if(this.oncreate) this.oncreate(this,props); //set scripted behaviors
 }
 
 state = {
@@ -342,6 +396,45 @@ set onchanged(onchanged) {
     this.setAttribute('onchanged',onchanged);
 }
 
+get styles() {
+    return this.styles
+}
+
+set styles(templateStr) {
+    let elm = `
+    <style>
+        ${templateStr}
+    </style>
+    `;
+
+    if(this.template.indexOf('<style')) {
+        this.template.splice(this.template.indexOf('<style'+7),this.template.indexOf('</style'),templateStr);
+    } else {
+        if(this.template.indexOf('<head')) {
+            this.template.splice(this.template.indexOf('<head'+6),0,elm);
+        } else this.template = elm + this.template;
+    }
+
+    if(this.querySelector('style')) { //get the top style 
+        if(!this.useShadow) {
+            this.useShadow = true;
+            this.render()
+        } else this.querySelector('style').innerHTML = templateStr;
+
+    } else {
+        this.useShadow = true;
+        this.render();
+    }
+}
+
+get renderonchanged() {
+    return this.renderonchanged;
+}
+
+set renderonchanged(onchanged) {
+    this.setAttribute('renderonchanged',onchanged);
+}
+
 get onresize() {
     return this.props;
 } 
@@ -417,9 +510,9 @@ try{
         }
         else {
             try {
-                newFunc = eval(newFuncHead + newFuncBody + "}");
+                newFunc = (0,eval)(newFuncHead + newFuncBody + "}");
             } catch(err) {
-                newFunc = eval(method); //try just evaluating the method
+                newFunc = (0,eval)(method); //try just evaluating the method
             }
         }
     }
@@ -430,22 +523,6 @@ return newFunc;
 
 }
 
-
-
-
-    addCustomElement(DOMElement,'dom-');
-
-    class CustomElement extends DOMElement { 
-        props={defaultprop:1}
-        template=(props)=>{
-            console.log(props);
-            return `
-            <div>New Element: ${JSON.stringify(props)}</div>
-        `} 
-    }
-
-    //addCustomElement(customelement);
-    CustomElement.addElement()
 
     </script>
 </head>
