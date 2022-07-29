@@ -24,7 +24,7 @@ class CustomElement extends DOMElement {
   styles=undefined //you can include a stylesheet template string here to trigger the shadow dom for scoped style sheets automatically, prepended to the template or inserted into head if its in the template. Triggers an html updated if already rendered.
 
   //The template can be an imported html file when building in node.js for a better experience
-  template=(props, self)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
+  template=(self,props)=>{return `<div>New Element: ${JSON.stringify(props)}</div>`} 
          
   oncreate=undefined, //(self,props)=>{} when the node is created e.g. setting up buttons (props) => {}
   ondelete=undefined, //(self,props)=>{} when the node is deleted, e.g. cleaning up events (props) => {}
